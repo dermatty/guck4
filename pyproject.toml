@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "guck4"
+version = "4.0.1"
+description = "Version 4 of the world-famous GUCK"
+authors = ["dermatty <stephan@untergrabner.at>"]
+license = "GPL v3"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fridagram = {version = "^0.1.13", source = "etec"}
+torch = "^2.1.1"
+torchvision = "^0.16.1"
+torchaudio = "^2.1.1"
+
+[[tool.poetry.source]]
+name = "etec"
+url = "http://etec.iv.at:8123"
+default = false
+secondary = true
+
+[tool.poetry.scripts]
+guck4 = "guck4.guck4:run"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block repstr %}
+<div class="panel panel-default">
+    <div class="panel-heading" style="font-size:18px;" align="center">Photos
+    <a href="#" class="btn btn-info btn" onclick="location.href='{{ url_for('photos')}}'">
+        <span class="glyphicon glyphicon-refresh"></span> Refresh
+    </a>
+    </div>
+    <div class="panel-body">
+        <div class="container">
+            <div class="row">
+                {% for pn in detlist %}
+                <div class="col-sm-12">
+                    <br>
+                    <img class="img-responsive" alt={{ p1 }} width="640" height="320" src="{{ url_for('static', filename=pn) }}">
+                </div>
+                {% endfor %}
+            </div>
+            <br>
+        </div>
+    </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="de">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="refresh" content="70">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+        <link rel="shortcut icon" href="{{ url_for('static', filename='wastl.png') }}">
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/bootbox.js/4.4.0/bootbox.min.js"></script>
+        {# below is the CDN for the SummerNote control #}
+        <!-- include summernote css/js -->
+        <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.15/dist/summernote.min.css" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.15/dist/summernote.min.js"></script>
+        <style>
+         .navbar-custom { font-size: 18px;}
+         .navbar-brand { font-size: 32px;}
+         .navbar-nav>li>a{color: white;}
+        </style>
+        <title>GUCK 3</title>
+    </head>
+    
+    <body>
+       <script type=text/javascript>
+         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+         $(function() {
+             var source = new EventSource("{{ url_for('sse.stream') }}");
+              //var eventtype_nr = "nrdet_" + {% if current_user.is_authenticated %} "{{ current_user.get_id() }}" {% endif %}
+             // var eventtype_title = "title_" + {% if current_user.is_authenticated %} "{{ current_user.get_id() }}" {% endif %}
+             // var eventtype_idle = "idle_" + {% if current_user.is_authenticated %} "{{ current_user.get_id() }}" {% endif %}
+             // var eventtype_guck = "guck"
+             // var eventtype_paused = "paused"
+             // listener for showing nr_detections
+             source.addEventListener("nrdet0", function(event) {
+                 var data = JSON.parse(event.data);
+                 $("#nralarms").html(data.message);
+             }, false);
+             // listener for showing nr_detections
+             source.addEventListener("idle0", function(event) {
+                 var data = JSON.parse(event.data);
+                 $("#nralarms").html(data.message);
+             }, false);
+             // listener for paused
+             source.addEventListener("paused0", function(event) {
+                 var data = JSON.parse(event.data);
+                 $("#nralarms").html(data.message);
+                 document.title = "GUCK 3 ...";
+             }, false);
+             // listener for showing red
+             source.addEventListener("guck0", function(event) {
+                 var data = JSON.parse(event.data);
+                 $("#nralarms").html(data.message);
+                 document.title = "GUCK 3";
+             }, false);
+             // listener for nr_detections in title_bar
+             source.addEventListener("title0", function(event) {
+                 var data = JSON.parse(event.data);
+                 var nr = data.message;
+                 if (Number(nr) > 0) {
+                     document.title = "GUCK 3 (" + data.message + ")";
+                 } else {
+                     document.title = "GUCK 3";
+                 }
+             }, false);
+             source.addEventListener('error', function(event) { }, false);
+         });
+        </script>
+        <nav class="navbar navbar-inverse navbar-custom">
+            <div class="container-fluid">
+                <div class="navbar-header" id="header1">
+                    <a class="navbar-brand" href="#">GUCK 3</a>
+                </div>
+                {% set navbar0_dd = [("home","/home","Home",".", ".", ".", ".", ".",".","."),
+                                     ("photos","/photos","Photos",".", ".", ".", ".", ".",".","."), 
+                                     ("start","/pdstart","Start",".", ".", ".", ".", ".",".","."),
+                                     ("stop","/pdstop","Stop",".", ".", ".", ".", ".",".","."),
+                                     ("config","/config","Config",".", ".", ".", ".", ".",".","."),
+                                     ("restart","/pdrestart","Restart",".", ".", ".", ".", ".",".","."),
+                                     ("status","/status","Status",".", ".", ".", ".", ".",".",".")] %} 
+                <!-- ("guck","/guck","Guck","start", "status","photo","config","system","stop","runtime-settings"),
+                ("location","/location","Location", ".",".",".",".",".",".","."),
+                ("hue","/hue","Hue",".",".",".",".",".",".",".")] %} -->
+                <ul class="nav navbar-nav">     
+                    {% for id, href, caption, pp1, pp2, pp3, pp4, pp5, pp6, pp7 in navbar0_dd%}
+                    {% if pp1 != "." %}
+                    <li id="{{ id|e }}" {% if active_nav == id %} class="dropdown active" {% else %} class="dropdown" {% endif %}><a class="dropdown-toggle" data-toggle="dropdown" href=" href="{{ href|e }}"">{{ caption|e }}<span class="caret"></span></a>
+                        <ul class="dropdown-menu" style="font-size: 18px;">
+                            <li><a href="{{ url_for(id, menu1=pp1) }}">{{ pp1|e }}</a></li>
+                            {% if pp2 != "." %} <li><a href="{{ url_for(id, menu1=pp2) }}">{{ pp2|e }}</a></li> {% endif %}
+                            {% if pp3 != "." %} <li><a href="{{ url_for(id, menu1=pp3) }}">{{ pp3|e }}</a></li> {% endif %}
+                            {% if pp4 != "." %} <li><a href="{{ url_for(id, menu1=pp4) }}">{{ pp4|e }}</a></li> {% endif %}
+                            {% if pp5 != "." %} <li><a href="{{ url_for(id, menu1=pp5) }}">{{ pp5|e }}</a></li> {% endif %}
+                            {% if pp6 != "." %} <li><a href="{{ url_for(id, menu1=pp6) }}">{{ pp6|e }}</a></li> {% endif %}
+                            {% if pp7 != "." %} <li><a href="{{ url_for(id, menu1=pp7) }}">{{ pp7|e }}</a></li> {% endif %}
+                        </ul>
+                    </li>
+                    {% else %}
+                    <li id="{{ id|e }}" {% if active_nav == id %} class="active" {% endif %}><a href="{{ href|e }}">{{ caption|e }}</a></li>
+                    {% endif %}
+                    {% endfor %}
+                    <li id="cameraicon">
+                        <a href="#"  onclick="location.href='{{ url_for('detections') }}'" class="btn btn-default btn-lg" style="width: 60px; margin-left: 15px;">
+                            <span class="glyphicon glyphicon-camera" style="color: black;"></span> 
+                        </a>
+                    </li>
+                    <li id="nralarms"></li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                    {% if userauth == false %}
+                    <li><a href="#" onclick="location.href='{{ url_for('userlogin') }}'"><span class="glyphicon glyphicon-log-in"></span>  Login</a></li>
+                    {% else %}
+                    {% set splitlist = current_user.get_id().split("@") %}
+                    <li><a href="#"><span class="glyphicon glyphicon-user"></span> {{ splitlist[0]|capitalize }}</a></li>
+                    <li><a href="#" onclick="location.href='{{ url_for('userlogout') }}'"><span class="glyphicon glyphicon-log-out"></span>  Logout</a></li>
+                    {% endif %}
+            </div>
+        </nav>
+        <div class="container">
+            {% block repstr %}
+            {% endblock %}
+        </div>
+    </body>
+</html>

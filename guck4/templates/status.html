@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block repstr %}
+     <div class="panel panel-default col-md-6 col-md-offset-3">
+       <div class="panel-heading" style="font-size:18px;">
+	        <center>Guck Status</center>
+       </div>
+       <div class="panel-body">
+         {% for line in statuslist %}
+            {% if line|truncate(3,true,"") == "---" %}
+               <p style="font-size:16px;">{{ line }}</p>
+            {% else %}
+               <p style="font-size:12px;">{{ line }}</p>
+            {% endif %}
+         {% endfor %}
+       </div>
+     </div>
+{% endblock %}

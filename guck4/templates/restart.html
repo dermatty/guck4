@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% set active_nav = "guck" %}
+
+{% block repstr %}
+<style>
+.loader {
+  border: 16px solid #f3f3f3;
+  border-radius: 50%;
+  border-top: 16px solid #3498db;
+  width: 120px;
+  height: 120px;
+  position: absolute;
+  left: 46%;
+  top: 30%;
+  -webkit-animation: spin 2s linear infinite; /* Safari */
+  animation: spin 2s linear infinite;
+}
+
+/* Safari */
+@-webkit-keyframes spin {
+  0% { -webkit-transform: rotate(0deg); }
+  100% { -webkit-transform: rotate(360deg); }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+</style>
+
+<div class="panel panel-default">
+    <div class="panel-heading" style="font-size:18px;">
+	<center>Guck System Action</div>
+    <div class="panel-body">
+        <br>
+        <center>Restarting GUCK3 people detection & webserver...</center>
+	<br><br><br><br><br><br><br><br><br><br><br><br><br>
+	 <div class="loader"></div> 
+    </div>
+</div>
+</div>
+{% endblock %}
+

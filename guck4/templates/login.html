@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% set active_nav = "home" %}
+
+
+
+{% block repstr %}
+<div class="panel panel-default">
+    <div class="panel-heading" style="font-size:18px;">Login</div>
+        <div class="panel-body">
+            <br>
+            <form action="" method="post">
+                <div class="row">
+                    <div class="col-sm-2">
+                        {{ userloginform.email.label }}
+                    </div>
+                    <div class="col-sm-2">
+                        {{ userloginform.email }}
+                    </div>
+                </div>    
+                <br>
+                <div class="row">
+                    <div class="col-sm-2">
+                        {{ userloginform.password.label }}
+                    </div>
+                    <div class="col-sm-2">
+                        {{ userloginform.password }}
+                    </div>
+                </div>    
+                <hr><br>
+                {{ userloginform.submit_u(class="btn btn-primary") }}
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block repstr %}
+
+<style>
+.marginauto {
+    margin: 10px auto 20px;
+    display: block;
+}
+</style>
+
+<div class="panel panel-default">
+   <br>
+   <div class="container-fluid">
+      <div class="row">
+          <div class="col-sm-3" style="text-align: center;">
+              <a href="#" class="btn btn-success btn-md" style="float: none;" onclick="location.href='{{ url_for('livecam', camnrstr=camnr-1, ptz=1) }}'">
+                  <span class="glyphicon glyphicon-arrow-up"></span>
+              </a>
+          </div>
+          <div class="col-sm-3" style="text-align: center;"> 
+              <a href="#" class="btn btn-success btn-md" style="float: none;" onclick="location.href='{{ url_for('livecam', camnrstr=camnr-1, ptz=2) }}'">
+                 <span class="glyphicon glyphicon-arrow-down"></span>
+              </a>
+          </div>
+          <div class="col-sm-3" style="text-align: center;">
+              <a href="#" class="btn btn-success btn-md" style="float: none;" onclick="location.href='{{ url_for('livecam', camnrstr=camnr-1, ptz=3) }}'">
+                  <span class="glyphicon glyphicon-arrow-left"></span>
+              </a>
+          </div>
+          <div class="col-sm-3" style="text-align: center;">
+              <a href="#" class="btn btn-success btn-md" style="float: none;" onclick="location.href='{{ url_for('livecam', camnrstr=camnr-1, ptz=4) }}'">
+                  <span class="glyphicon glyphicon-arrow-right"></span>
+              </a>
+          </div>
+      </div> {# row #}
+   </div> {# container #} 
+   <br>
+   <div class="container" style="text-align:center;">
+      <img class="marginauto" src="{{ url_for('video_feed', camnr=camnr) }}">
+   </div>
+   <div class="panel-body">
+      <table id="camurltable" class="table table-hover">
+          <thead>
+              <tr>
+                  <th class="text-center">Camera</th>
+                  <th class="text-center">Name</th>
+                  <th class="text-center">Choose</th>
+              </tr>
+          </thead>
+          <tbody id="camurltablebody">
+              <form>
+                  {% for camname, camurl, vurl in cameralist %}
+                  <tr id="gaga"> 
+                      <td class="text-center">{{ loop.index }}</td> 
+                      <td class="text-center">{{ camname }}</td>
+                      <td class="text-center">
+                          <div class="radio">
+                              <label><input id="camchangebu{{ loop.index }}" type="radio" name="optradio"{% if camnr == loop.index %}checked="checked"{% endif %} onclick="location.href='{{ url_for('livecam', camnrstr=loop.index-1) }}'"></label>
+                          </div>
+                      </td>
+                      {# <td class="text-center">{{ camurl }}</td> #}
+                  </tr>
+                  {% endfor %}
+              </form>
+          </tbody>
+      </table>
+  </div> {# panel body #}
+
+  <br><br>
+</div> {# panel #}
+{% endblock %}
+    

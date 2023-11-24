@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block repstr %}
+    <div class='container'>
+    {% if status == "config file saved!" %}
+       <p><font color="green">{{status}} - you have to restart to have changes to take effect!</font></p>
+    {% elif status %}
+       <p><font color="red">{{status}}</font></p>
+    {% endif %}
+    {% if config_file %}
+    <b><font color="blue">{{config_file}}</font></b>
+    {% endif %}
+    <form method="post">
+      <div class='form-group'>
+        {# including the SummerNote control on the form, from CDN #}
+        {# <label for='summernote'>Content</label> #}
+        <textarea id="summernote" name="editordata" class='form-control'>
+             {{content}}
+        </textarea>
+        <script>
+        $('#summernote').summernote({
+          placeholder: 'Enter some content here.',
+          tabsize: 4,
+          maxHeight: 620,
+          toolbar: [],
+          spellCheck: false
+        });
+        </script>
+      </div>
+      <div class="form-group">
+            <button type="submit" name="submit" value="submit" class="btn btn-info">Save</button>
+            <button type="cancel" name="submit" value="cancel" class="btn btn-secondary">Cancel</button>
+      </div>
+    </form>
+    </div>
+{% endblock %}

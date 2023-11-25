@@ -1,6 +1,7 @@
 from .mplogging import whoami
 import pickle
 import time
+from guck4 import __appname__, __appabbr__
 
 
 # --------------- REDIS API -------------------
@@ -11,23 +12,23 @@ class RedisAPI:
         self.dirs = dirs
         self.logger = logger
         self.copyok = True
-        if not self.getp("g3_userdata"):
-            self.setp("g3_userdata", {})
-        if not self.getp("g3_photodata"):
-            self.setp("g3_photodata", [])
-        if not self.getp("g3_userdata_last_updated"):
-            self.setp("g3_userdata_last_updated", 0)
-        if not self.getp("g3_new_detections"):
-            self.setp("g3_new_detections", 0)
-        if not self.getp("g3_hoststatus"):
-            self.setp("g3_hoststatus", None)
-        if not self.getp("g3_free_photodata"):
-            self.setp("g3_free_photodata", [])
-        if not self.getp("g3_free_photodata_status"):
-            self.setp("g3_free_photodata_status", [])
+        if not self.getp(__appabbr__ + "_userdata"):
+            self.setp(__appabbr__ + "_userdata", {})
+        if not self.getp(__appabbr__ + "_photodata"):
+            self.setp(__appabbr__ + "_photodata", [])
+        if not self.getp(__appabbr__ + "_userdata_last_updated"):
+            self.setp(__appabbr__ + "_userdata_last_updated", 0)
+        if not self.getp(__appabbr__ + "_new_detections"):
+            self.setp(__appabbr__ + "_new_detections", 0)
+        if not self.getp(__appabbr__ + "_hoststatus"):
+            self.setp(__appabbr__ + "_hoststatus", None)
+        if not self.getp(__appabbr__ + "_free_photodata"):
+            self.setp(__appabbr__ + "_free_photodata", [])
+        if not self.getp(__appabbr__ + "_free_photodata_status"):
+            self.setp(__appabbr__ + "_free_photodata_status", [])
         self.copy_users_to_redis()
         self.copy_cameras_to_redis()
-        self.setp("g3_putcmd", "")
+        self.setp(__appabbr__ + "_putcmd", "")
 
     def setp(self, key, value):
         try:
@@ -44,28 +45,28 @@ class RedisAPI:
             return None
 
     def set_host_status(self, status):
-        self.setp("g3_hoststatus", status)
+        self.setp(__appabbr__ + "_hoststatus", status)
 
     def get_host_status(self):
-        return self.getp("g3_hoststatus")
+        return self.getp(__appabbr__ + "_hoststatus")
 
     def set_free_photodata(self, data):
-        self.setp("g3_free_photodata", data)
+        self.setp(__appabbr__ + "_free_photodata", data)
 
     def get_free_photodata(self):
-        return self.getp("g3_free_photodata")
+        return self.getp(__appabbr__ + "_free_photodata")
 
     def set_putcmd(self, cmd):
-        self.setp("g3_putcmd", cmd)
+        self.setp(__appabbr__ + "_putcmd", cmd)
 
     def get_putcmd(self):
-        ret = self.getp("g3_putcmd")
-        self.setp("g3_putcmd", "")
+        ret = self.getp(__appabbr__ + "_putcmd")
+        self.setp(__appabbr__ + "_putcmd", "")
         return ret
 
     def copy_redis_to_cameras_cfg(self):
         self.logger.debug(whoami() + "copying redis camera data to config ...")
-        cameras = self.getp("g3_cameras")
+        cameras = self.getp(__appabbr__ + "_cameras")
         for i, c in enumerate(cameras, start=1):
             cstr = "CAMERA" + str(i)
             self.cfg[cstr]["ACTIVE"] = "yes" if c[0] else "no"
@@ -85,7 +86,7 @@ class RedisAPI:
             self.cfg[cstr]["USER"] = str(c[14])
             self.cfg[cstr]["PASSWORD"] = str(c[15])
         # write to cfg_file
-        cfg_file = self.dirs["main"] + "guck3.config"
+        cfg_file = self.dirs["configfile"]
         try:
             with open(cfg_file, "w") as f:
                 self.cfg.write(f)
@@ -97,7 +98,7 @@ class RedisAPI:
 
     def copy_cameras_to_redis(self):
         self.logger.debug(whoami() + "copying camera data to redis ...")
-        self.setp("g3_cameras", [])
+        self.setp(__appabbr__ + "_cameras", [])
         cameralist = []
         idx = 1
         while True:
@@ -131,12 +132,12 @@ class RedisAPI:
         if idx == 1:
             self.copyok = False
             return
-        self.setp("g3_cameras", cameralist)
+        self.setp(__appabbr__ + "_cameras", cameralist)
         self.logger.debug(whoami() + " ... camera data copied to redis!")
 
     def get_cameras(self):
         camera_conf = []
-        cameralist = self.getp("g3_cameras")
+        cameralist = self.getp(__appabbr__ + "_cameras")
         for c in cameralist:
             cdata = {
                     "name": c[1],
@@ -162,7 +163,7 @@ class RedisAPI:
         return camera_conf
 
     def copy_users_to_redis(self):
-        self.setp("g3_users", {})
+        self.setp(__appabbr__ + "_users", {})
         idx = 1
         users = {}
         while True:
@@ -177,34 +178,34 @@ class RedisAPI:
         if idx == 1:
             self.copyok = False
             return
-        self.setp("g3_users", users)
+        self.setp(__appabbr__ + "_users", users)
         self.logger.debug(whoami() + "user data copied to db")
 
     def get_photodata(self):
-        return self.getp("g3_photodata")
+        return self.getp(__appabbr__ + "_photodata")
 
     def insert_photodata(self, photonames):
-        photodata = self.getp("g3_photodata")
+        photodata = self.getp(__appabbr__ + "_photodata")
         try:
             for p in photonames:
                 photodata.insert(0, p)
                 if len(photodata) > 50:
                     del photodata[-1]
-            self.setp("g3_photodata", photodata)
+            self.setp(__appabbr__ + "_photodata", photodata)
         except Exception as e:
             self.logger.error(whoami() + str(e) + ", cannot insert photodata!")
 
     def get_users(self):
-        return self.getp("g3_users")
+        return self.getp(__appabbr__ + "_users")
 
     def get_userdata(self):
-        return self.getp("g3_userdata")
+        return self.getp(__appabbr__ + "_userdata")
 
     def get_userdata_last_updated(self):
-        return self.getp("g3_userdata_last_updated")
+        return self.getp(__appabbr__ + "_userdata_last_updated")
 
     def user_in_userdata(self, username):
-        userdata = self.getp("g3_userdata")
+        userdata = self.getp(__appabbr__ + "_userdata")
         return userdata, (len([1 for key in userdata if key == username]) > 0)
 
     def insert_update_userdata(self, username, lasttm, active, no_newdetections, photolist):
@@ -216,7 +217,7 @@ class RedisAPI:
             userdata[username]["active"] = active
             userdata[username]["no_newdetections"] = no_newdetections
             userdata[username]["photolist"] = photolist
-            self.setp("g3_userdata", userdata)
-            self.setp("g3_userdata_last_updated", time.time())
+            self.setp(__appabbr__ + "_userdata", userdata)
+            self.setp(__appabbr__ + "_userdata_last_updated", time.time())
         except Exception as e:
             self.logger.warning(whoami() + str(e))

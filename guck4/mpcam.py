@@ -1,6 +1,6 @@
 import cv2
 from setproctitle import setproctitle
-from guck4 import mplogging
+from guck4 import mplogging, __appabbr__
 import os
 import time
 import signal
@@ -13,14 +13,13 @@ import time
 import queue
 
 CNAME = None
-CVMAJOR = "4"
 TERMINATED = False
 
 
 def whoami():
     outer_func_name = str(inspect.getouterframes(inspect.currentframe())[1].function)
     outer_func_linenr = str(inspect.currentframe().f_back.f_lineno)
-    return outer_func_name + " " + CNAME + " / #" + outer_func_linenr + ": "
+    return outer_func_name + " " + str(CNAME) + " / #" + outer_func_linenr + ": "
 
 
 def auto_canny(image, sigma=0.33):
@@ -251,15 +250,13 @@ class NewMatcherThread(Thread):
 
 def run_cam(cfg, options, child_pipe, mp_loggerqueue):
     global CNAME
-    global CVMAJOR
     global TERMINATED
 
     cv2.setNumThreads(1)
 
-    CVMAJOR = cv2.__version__.split(".")[0]
     CNAME = cfg["name"]
 
-    setproctitle("g3." + cfg["name"] + "_" + os.path.basename(__file__))
+    setproctitle(__appabbr__ + "." + cfg["name"] + "_" + os.path.basename(__file__))
 
     logger = mplogging.setup_logger(mp_loggerqueue, __file__)
     logger.info(whoami() + "starting ...")

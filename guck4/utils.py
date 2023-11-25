@@ -6,7 +6,6 @@ import queue
 import json
 import subprocess
 import sensors
-import psutil
 import time
 import urllib.request
 from .mplogging import whoami
@@ -14,6 +13,7 @@ import base64
 import numpy as np
 import datetime
 import cv2
+import psutil
 
 
 class NetConfigReader:
@@ -124,21 +124,36 @@ class ConfigReader:
 
 
 # setup folders
-def setup_dirs():
+def setup_dirs(version):
     try:
         install_dir = os.path.dirname(os.path.realpath(__file__))
         userhome = expanduser("~")
-        maindir = userhome + "/.guck3/"
-        logsdir = "/media/cifs/dokumente/g3logs/"
+        try:
+            if version.startswith("3"):
+                configfolder = "/.guck3/"
+                configfile0 = "guck3.config"
+                logsdir = "/media/cifs/dokumente/g3logs/"
+            else:
+                configfolder = "/.guck4/"
+                configfile0 = "guck4.config"
+                logsdir = "/media/cifs/dokumente/g4logs/"
+        except:
+            configfolder = "/.guck4/"
+            configfile0 = "guck4.config"
+            logsdir = "/media/cifs/dokumente/g4logs/"
+        maindir = userhome + configfolder
+
         videodir = maindir + "video/"
         photodir = maindir + "photo/"
+        configfile = maindir + configfile0
         dirs = {
             "install": install_dir,
             "home": userhome,
             "main": maindir,
             "video": videodir,
             "photo": photodir,
-            "logs": logsdir
+            "logs": logsdir,
+            "configfile": configfile
         }
     except Exception as e:
         return -1, str(e)
@@ -164,7 +179,6 @@ def setup_dirs():
         except Exception as e:
             return -1, str(e) + ": cannot create video directory!", None, None, None, None, None
 
-    print("#1")
     # check for photodir
     if not os.path.exists(photodir):
         try:
@@ -173,18 +187,18 @@ def setup_dirs():
             return -1, str(e) + ": cannot create photo directory!", None, None, None, None, None
 
     # check for configfile
-    if not os.path.isfile(maindir + "guck3.config"):
-        config_template = "/etc/default/guck3.config"
+    if not os.path.isfile(configfile):
+        config_template = "/etc/default/" + configfile0
         if os.path.isfile(config_template):
             try:
-                shutil.copy(config_template, maindir + "guck3.config")
+                shutil.copy(config_template, configfile)
             except Exception as e:
-                return -1, str(e) + ": cannot initialize guck3.config file!"
+                return -1, str(e) + ": cannot initialize " + configfile0 + "!"
         else:
             try:
-                shutil.copy(install_dir + "/data/guck3.config", maindir + "guck3.config")
+                shutil.copy(install_dir + "/data/" + configfile0, configfile)
             except Exception as e:
-                return -1, str(e) + ": cannot initialize guck3.config file!"
+                return -1, str(e) + ": cannot initialize " + configfile0 + "!"
 
     return 1, dirs
 
@@ -330,13 +344,13 @@ def get_sens_temp(hostn="raspisens", filen="/home/pi/sens.txt"):
     return temp, hum
 
 
-def get_status(state_data):
+def get_status(state_data, version):
     osversion = os.popen("cat /etc/os-release").read().split("\n")[2].split("=")[1].replace('"', '')
 
     # os & version
     ret = "------- General -------"
     ret += "\nOS: " + osversion
-    ret += "\nVersion: " + os.environ["GUCK3_VERSION"]
+    ret += "\nVersion: " + version
     ret += "\nAlarm System Active: "
     ret += "YES" if state_data.PD_ACTIVE else "NO"
     '''ret += "\nRecording: "

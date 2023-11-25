@@ -7,6 +7,7 @@ import inspect
 from setproctitle import setproctitle
 import os
 import signal
+from guck4 import __appabbr__
 
 
 class SigHandler_ll:
@@ -24,7 +25,7 @@ def whoami():
 
 
 def logging_listener(queue, level, filename):
-    setproctitle("g3.loglistener.py")
+    setproctitle(__appabbr__ + ".loglistener.py")
     sh = SigHandler_ll()
     signal.signal(signal.SIGINT, sh.sighandler_ll)
     signal.signal(signal.SIGTERM, sh.sighandler_ll)
@@ -76,7 +77,7 @@ def stop_logging_listener(queue, listener):
 
 
 if __name__ == '__main__':
-    setproctitle("g3." + os.path.basename(__file__))
+    setproctitle(__appabbr__ + "." + os.path.basename(__file__))
 
     # starts loglistener
     filename = "mptest.log"

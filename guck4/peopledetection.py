@@ -2,7 +2,7 @@ import os
 import queue
 from setproctitle import setproctitle
 from .mplogging import whoami
-from guck4 import mplogging, mpcam, clear_all_queues, ConfigReader
+from guck4 import mplogging, mpcam, clear_all_queues, ConfigReader, __appabbr__
 import time
 import cv2
 import torch
@@ -421,7 +421,7 @@ def stop_all_recordings(cameras):
 def run_cameras(pd_outqueue, pd_inqueue, dirs, cfg, mp_loggerqueue):
     global TERMINATED
 
-    setproctitle("g3." + os.path.basename(__file__))
+    setproctitle(__appabbr__ + "." + os.path.basename(__file__))
 
     # tf.get_logger().setLevel('INFO')
     # tf.autograph.set_verbosity(1)

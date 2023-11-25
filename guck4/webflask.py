@@ -2,21 +2,20 @@ from __future__ import unicode_literals
 import multiprocessing
 import gunicorn.app.base
 import os
-from flask import Flask, render_template, make_response, request, g, redirect, url_for, session, Response
+from flask import Flask, render_template, request, g, redirect, url_for
 from flask.logging import default_handler
 from flask_sse import sse
 from flask_session import Session
 import flask_login
 from setproctitle import setproctitle
 from .mplogging import whoami
-from .g3db import RedisAPI
+from .g4db import RedisAPI
 import time
-from guck4 import models, setup_dirs, check_cfg_file, get_external_ip, get_sens_temp
+from guck4 import models, setup_dirs, check_cfg_file, __version__, __appname__, __appabbr__
 from threading import Thread, Lock
 import logging
 import redis
 import configparser
-import requests
 import signal
 import shutil
 import html2text
@@ -28,8 +27,10 @@ DIRS = None
 maincomm = None
 
 # get redis data
-ret, dirs = setup_dirs()
-cfg_file = dirs["main"] + "guck3.config"
+ret, dirs = setup_dirs(__version__)
+cfg_file = dirs["configfile"]
+
+
 cfg = configparser.ConfigParser()
 cfg.read(cfg_file)
 try:
@@ -40,6 +41,8 @@ try:
     REDIS_PORT = int(cfg["OPTIONS"]["REDIS_PORT"])
 except Exception:
     REDIS_PORT = 6379
+
+
 REDISCLIENT = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, db=0)
 
 
@@ -52,9 +55,9 @@ def number_of_workers():
 def sighandler(a, b):
     try:
         # RED.copy_redis_to_cameras_cfg()
-        filelist = [f for f in os.listdir("./guck3/static/") if f.endswith(".jpg")]
+        filelist = [f for f in os.listdir("./" + __appname__ + "/static/") if f.endswith(".jpg")]
         for f in filelist:
-            os.remove("./guck3/static/" + f)
+            os.remove("./" + __appname__ + "/static/" + f)
     except Exception as e:
         print(str(e))
 
@@ -240,8 +243,7 @@ def index():
 @flask_login.login_required
 def config():
     status = ""
-    config_file = DIRS["main"] + "guck3.config"
-    content = ""
+    config_file = DIRS["configfile"]
     if request.method == "GET":
         with open(config_file, "r") as f:
             content = ""
@@ -323,14 +325,14 @@ def restart():
 @app.route("/detections", methods=['GET', 'POST'])
 @flask_login.login_required
 def detections():
-    filelist = [f for f in os.listdir("./guck3/static/") if f.endswith(".jpg")]
+    filelist = [f for f in os.listdir("./" + __appname__ + "/static/") if f.endswith(".jpg")]
     for f in filelist:
-        os.remove("./guck3/static/" + f)
+        os.remove("./" + __appname__ + "/static/" + f)
     detlist = []
     for p in RED.get_photodata():
         try:
             p1 = os.path.basename(p)
-            shutil.copy(p, "./guck3/static/" + p1)
+            shutil.copy(p, "./" + __appname__ + "/static/" + p1)
             detlist.append(p1)
         except Exception:
             pass
@@ -352,7 +354,7 @@ def photos():
     for p in free_photodata:
         try:
             p1 = os.path.basename(p)
-            shutil.copy(p, "./guck3/static/" + p1)
+            shutil.copy(p, "./" + __appname__ + "/static/" + p1)
             detlist.append(p1)
         except Exception:
             pass
@@ -387,7 +389,7 @@ def main(cfg, dirs, inqueue, outqueue, loggerqueue):
     global app
     global maincomm
 
-    setproctitle("g3." + os.path.basename(__file__))
+    setproctitle(__appabbr__ + "." + os.path.basename(__file__))
 
     DIRS = dirs
 

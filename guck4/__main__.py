@@ -236,8 +236,7 @@ class TelegramThread(Thread):
 
 		self.running = True
 
-		rep = "Welcome to "+  __appname__ + " / " + __version__ + "! Enter '?' or 'help' for help\n" + \
-			  "Please press 's' + ENTER to start (fg bug)!"
+		rep = "Welcome to "+  __appname__ + " / " + __version__ + "! Enter '?' or 'help' for help\n"
 		fg.send_message(self.token, self.chatids, rep)
 		lastt0 = time.time()
 		last_tg_cleanup = time.time()

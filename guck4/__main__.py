@@ -58,12 +58,12 @@ def GeneralMsgHandler(msg, bot, state_data):
 
 
 class SigHandler_guck:
-    def __init__(self, mp_loggerqueue, mp_loglistener, state_data, old_sys_stdout, logger):
+    def __init__(self, mp_loggerqueue, mp_loglistener, state_data, logger):
         self.logger = logger
         self.state_data = state_data
         self.mp_loggerqueue = mp_loggerqueue
         self.mp_loglistener = mp_loglistener
-        self.old_sys_stdout = old_sys_stdout
+
 
     def sighandler_guck(self, a, b):
         global TERMINATED
@@ -114,8 +114,6 @@ class SigHandler_guck:
                     print(trstr + "killing loglistener")
                     os.kill(self.mp_loglistener.pid, signal.SIGKILL)
                 print(self.get_trstr(exit_status) + "loglistener exited!")
-        if sys.stdout != self.old_sys_stdout:
-            sys.stdout = self.old_sys_stdout
 
 
 def input_raise_to(a, b):
@@ -187,7 +185,7 @@ class KeyboardThread(Thread):
 			return
 		print(txt)
 
-	def send_photo(self, photopath):
+	def send_photo(self, photopath, caption):
 		pass
 
 	def stop(self):
@@ -375,29 +373,29 @@ def mainloop():
 	TERMINATED = False
 	RESTART = False
 
-	print("*" * 80)
-	print(str(datetime.datetime.now()) + ": START UP - starting GUCK " + __version__)
-	if psutil.Process(os.getpid()).ppid() == 1:
-		print("We are using systemd")
-
 	setproctitle(__appabbr__ + "." + os.path.basename(__file__))
 
 	# get dirs
 	ret, dirs = setup_dirs(__version__)
+
+	if __startmode__ == "systemd":
+		printlogdir = dirs["logs"] + "printlog.txt"
+		try:
+			sys.stdout = open(printlogdir, "w")
+		except Exception:
+			pass
+	print("*" * 80)
+	print(str(datetime.datetime.now()) + ": START UP - starting GUCK " + __version__)
+	if psutil.Process(os.getpid()).ppid() == 1:
+		print(" ... We are using systemd")
+	else:
+		print(" ... We are NOT using systemd!")
 	if ret == -1:
 		print(dirs)
 		print(str(datetime.datetime.now()) + ": START UP - " + dirs)
 		print(str(datetime.datetime.now()) + ": START UP - exiting ...")
 	else:
 		print(str(datetime.datetime.now()) + ": START UP - setup for folders ok!")
-
-	# redirect prints to file if not started from tty
-	old_sys_stdout = sys.stdout
-	if not sys.stdout.isatty():
-		try:
-			sys.stdout = open(dirs["logs"] + "printlog.txt", "w")
-		except Exception:
-			pass
 
 	# read GUCK config
 	try:
@@ -446,7 +444,7 @@ def mainloop():
 	logger.info(whoami() + "started with startmode " + __startmode__)
 
 	# sighandler
-	sh = SigHandler_guck(mp_loggerqueue, mp_loglistener, state_data, old_sys_stdout, logger)
+	sh = SigHandler_guck(mp_loggerqueue, mp_loglistener, state_data, logger)
 	old_sigint = signal.getsignal(signal.SIGINT)
 	old_sigterm = signal.getsignal(signal.SIGTERM)
 	signal.signal(signal.SIGINT, sh.sighandler_guck)
@@ -503,9 +501,14 @@ def mainloop():
 	wf_msglist = []
 	pd_cmd = None
 
+	lastt_stdout = time.time()
+
 	while not TERMINATED:
 
 		time.sleep(0.01)
+		if time.time() - lastt_stdout > 5:
+			sys.stdout.flush()
+			lastt_stdout = time.time()
 
 		# get from webflask queue
 		try:
@@ -649,10 +652,8 @@ def mainloop():
 	sh.shutdown(exitcode)
 	print(str(datetime.datetime.now()) + "... shutdown sequence finished!")
 
-	if sys.stdout != old_sys_stdout:
-		sys.stdout = old_sys_stdout
-	signal.signal(signal.SIGINT, old_sigint)
-	signal.signal(signal.SIGTERM, old_sigterm)
+	#signal.signal(signal.SIGINT, old_sigint)
+	#signal.signal(signal.SIGTERM, old_sigterm)
 	clear_all_queues([state_data.PD_INQUEUE, state_data.PD_OUTQUEUE, state_data.MAINQUEUE])
 	return exitcode
 

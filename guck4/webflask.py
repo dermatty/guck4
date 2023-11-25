@@ -11,13 +11,13 @@ from setproctitle import setproctitle
 from .mplogging import whoami
 from .g4db import RedisAPI
 import time
-from guck4 import models, setup_dirs, check_cfg_file, __version__, __appname__, __appabbr__
+from guck4 import models, setup_dirs, check_cfg_file, __version__, __appname__, __appabbr__, __startmode__
 from threading import Thread, Lock
 import logging
 import redis
 import configparser
 import signal
-import shutil
+import shutil, sys
 import html2text
 
 
@@ -29,6 +29,7 @@ maincomm = None
 # get redis data
 ret, dirs = setup_dirs(__version__)
 cfg_file = dirs["configfile"]
+static_dir = '/'.join(__file__.split("/")[:-1]) + "/static/"
 
 
 cfg = configparser.ConfigParser()
@@ -55,9 +56,9 @@ def number_of_workers():
 def sighandler(a, b):
     try:
         # RED.copy_redis_to_cameras_cfg()
-        filelist = [f for f in os.listdir("./" + __appname__ + "/static/") if f.endswith(".jpg")]
+        filelist = [f for f in os.listdir(static_dir) if f.endswith(".jpg")]
         for f in filelist:
-            os.remove("./" + __appname__ + "/static/" + f)
+            os.remove(static_dir + f)
     except Exception as e:
         print(str(e))
 
@@ -325,14 +326,14 @@ def restart():
 @app.route("/detections", methods=['GET', 'POST'])
 @flask_login.login_required
 def detections():
-    filelist = [f for f in os.listdir("./" + __appname__ + "/static/") if f.endswith(".jpg")]
+    filelist = [f for f in os.listdir(static_dir) if f.endswith(".jpg")]
     for f in filelist:
-        os.remove("./" + __appname__ + "/static/" + f)
+        os.remove(static_dir + f)
     detlist = []
     for p in RED.get_photodata():
         try:
             p1 = os.path.basename(p)
-            shutil.copy(p, "./" + __appname__ + "/static/" + p1)
+            shutil.copy(p, static_dir + p1)
             detlist.append(p1)
         except Exception:
             pass
@@ -354,7 +355,7 @@ def photos():
     for p in free_photodata:
         try:
             p1 = os.path.basename(p)
-            shutil.copy(p, "./" + __appname__ + "/static/" + p1)
+            shutil.copy(p, static_dir + p1)
             detlist.append(p1)
         except Exception:
             pass
@@ -388,6 +389,7 @@ def main(cfg, dirs, inqueue, outqueue, loggerqueue):
     global DIRS
     global app
     global maincomm
+    global static_dir
 
     setproctitle(__appabbr__ + "." + os.path.basename(__file__))
 
@@ -400,6 +402,7 @@ def main(cfg, dirs, inqueue, outqueue, loggerqueue):
     app.logger.addHandler(log_handler)
 
     app.logger.info(whoami() + "starting ...")
+    app.logger.info(whoami() + "static dir = " + static_dir)
 
     RED = RedisAPI(REDISCLIENT, dirs, cfg, app.logger)
     if not RED.copyok:

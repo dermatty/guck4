@@ -14,6 +14,7 @@ import numpy as np
 import datetime
 import cv2
 import psutil
+import paramiko
 
 
 class NetConfigReader:
@@ -65,6 +66,25 @@ class NetConfigReader:
 class ConfigReader:
     def __init__(self, cfg):
         self.cfg = cfg
+
+    def get_ssh(self):
+        ssh_conf = []
+        idx = 1
+        while True:
+            str0 = "SSH" + str(idx)
+            try:
+                assert self.cfg[str0]["hostname"]
+                sshdata = {
+                    "hostname": self.cfg[str0]["hostname"],
+                    "username": self.cfg[str0]["username"],
+                    "idrsa_file": self.cfg[str0]["idrsa_file"],
+                    "command": self.cfg[str0]["command"]
+                }
+                ssh_conf.append(sshdata)
+            except Exception:
+                break
+            idx += 1
+        return ssh_conf
 
     def get_cameras(self):
         camera_conf = []
@@ -323,6 +343,26 @@ def get_external_ip(hostlist=[("WAN2TMO_DHCP", "raspisens"), ("WAN_DHCP", "etec"
     return iplist
 
 
+def get_ssh_results(state_data):
+    reslist = []
+    for s in state_data.SSH_CONFIG:
+        try:
+            hostname = s["hostname"]
+            username = s["username"]
+            idrsa_file = s["idrsa_file"],
+            command = s["command"]
+            ssh_client = paramiko.SSHClient()
+            ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh_client.connect(hostname, username=username, key_filename=idrsa_file)
+            stdin, stdout, stderr = ssh_client.exec_command(command)
+            res0 = stdout.readlines()
+            res0list = [hostname, command, res0]
+            reslist.append(res0list)
+            ssh_client.close()
+        except Exception:
+            pass
+    return reslist
+
 def get_sens_temp(hostn="raspisens", filen="/home/pi/sens.txt"):
     procstr = "cat " + filen
     ssh = subprocess.Popen(["ssh", hostn, procstr], shell=False, stdout=subprocess.PIPE, stderr=subprocess. PIPE)
@@ -460,7 +500,14 @@ def get_status(state_data, version):
     ret += "\n------- Sensors -------"
     ret += "\nTemperature:  " + "%.1f" % temp + "C"
     ret += "\nHumidity: " + "%.1f" % hum + "%"
-    ret += "\n------- System Summary -------"
+    ret += "\n------- SSH commands -------"
+    ssh_reslist = get_ssh_results(state_data)
+    for sshr in ssh_reslist:
+        ssh_hostname, ssh_command, ssh_res0 = sshr
+        ret += "\n--- " + str(ssh_hostname) + " > " + str(ssh_command) + "\n"
+        for l0 in ssh_res0:
+            ret += "      " + l0
+    ret += "------- System Summary -------"
     ret += "\nRAM: "
     ret += "CRITICAL!" if mem_crit else "OK!"
     ret += "\nCPU: "

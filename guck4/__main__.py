@@ -20,141 +20,141 @@ _CLEAR_BOT_FREQ = 6  # clear bot freq in hours
 
 
 def GeneralMsgHandler(msg, bot, state_data):
-    global TERMINATED
-    global RESTART
-    # bot = tgram / kbd
-    bot0 = bot.lower()
-    if bot0 not in ["tgram", "kbd", "wf"]:
-        return None
-    reply = ""
-    if msg == "start":
-        state_data.MAINQUEUE.put(("start", bot0))
-        reply = "starting " + __appname__ + " people detection ..."
-    elif msg == "photos":
-        if bot0 == "tgram":
-            reply = "collecting photo snapshots from all cameras ..."
-        elif bot0 == "kbd":
-            reply = "cannot send photos in text console!"
-    elif msg == "stop":
-        if state_data.mpp_peopledetection:
-            if state_data.mpp_peopledetection.pid:
-                state_data.MAINQUEUE.put(("stop", None))
-                reply = "stopping " + __appname__ + " people detection ..."
-        else:
-            reply = __appname__ + " people detection is NOT running, cannot stop!"
-    elif msg == "exit!!" or msg == "restart!!":
-        if msg == "restart!!":
-            reply = "restarting " + __appname__ + "!"
-        else:
-            reply = "exiting " + __appname__ + "!"
-        state_data.MAINQUEUE.put((msg, None))
-    elif msg == "status":
-        reply, _, _, _, _ = get_status(state_data, __version__)
-    elif msg == "?" or msg == "help":
-        reply = "start|stop|exit!!|restart!!|status|photos"
-    else:
-        reply = "Don't know what to do with '" + msg + "'!"
-    return reply
+	global TERMINATED
+	global RESTART
+	# bot = tgram / kbd
+	bot0 = bot.lower()
+	if bot0 not in ["tgram", "kbd", "wf"]:
+		return None
+	reply = ""
+	if msg == "start":
+		state_data.MAINQUEUE.put(("start", bot0))
+		reply = "starting " + __appname__ + " people detection ..."
+	elif msg == "photos":
+		if bot0 == "tgram":
+			reply = "collecting photo snapshots from all cameras ..."
+		elif bot0 == "kbd":
+			reply = "cannot send photos in text console!"
+	elif msg == "stop":
+		if state_data.mpp_peopledetection:
+			if state_data.mpp_peopledetection.pid:
+				state_data.MAINQUEUE.put(("stop", None))
+				reply = "stopping " + __appname__ + " people detection ..."
+		else:
+			reply = __appname__ + " people detection is NOT running, cannot stop!"
+	elif msg == "exit!!" or msg == "restart!!":
+		if msg == "restart!!":
+			reply = "restarting " + __appname__ + "!"
+		else:
+			reply = "exiting " + __appname__ + "!"
+		state_data.MAINQUEUE.put((msg, None))
+	elif msg == "status":
+		reply, _, _, _, _ = get_status(state_data, __version__)
+	elif msg == "?" or msg == "help":
+		reply = "start|stop|exit!!|restart!!|status|photos"
+	else:
+		reply = "Don't know what to do with '" + msg + "'!"
+	return reply
 
 
 class SigHandler_guck:
-    def __init__(self, mp_loggerqueue, mp_loglistener, state_data, logger):
-        self.logger = logger
-        self.state_data = state_data
-        self.mp_loggerqueue = mp_loggerqueue
-        self.mp_loglistener = mp_loglistener
+	def __init__(self, mp_loggerqueue, mp_loglistener, state_data, logger):
+		self.logger = logger
+		self.state_data = state_data
+		self.mp_loggerqueue = mp_loggerqueue
+		self.mp_loglistener = mp_loglistener
 
 
-    def sighandler_guck(self, a, b):
-        global TERMINATED
-        TERMINATED = True
-        # self.shutdown(exit_status=1)
+	def sighandler_guck(self, a, b):
+		global TERMINATED
+		TERMINATED = True
+		# self.shutdown(exit_status=1)
 
-    def get_trstr(self, exit_status):
-        if exit_status == 3:
-            trstr = str(datetime.datetime.now()) + ": RESTART - "
-        else:
-            trstr = str(datetime.datetime.now()) + ": SHUTDOWN - "
-        return trstr
+	def get_trstr(self, exit_status):
+		if exit_status == 3:
+			trstr = str(datetime.datetime.now()) + ": RESTART - "
+		else:
+			trstr = str(datetime.datetime.now()) + ": SHUTDOWN - "
+		return trstr
 
-    def shutdown(self, exit_status=1):
-        trstr = self.get_trstr(exit_status)
-        if self.state_data.TG and self.state_data.TG.running:
-            self.state_data.TG.stop()
-        if self.state_data.KB and self.state_data.KB.active:
-            self.state_data.KB.stop()
-            self.state_data.KB.join()
-        mp_pd = self.state_data.mpp_peopledetection
-        if mp_pd:
-            if mp_pd.pid:
-                print(trstr + "joining peopledetection ...")
-                self.state_data.PD_OUTQUEUE.put("stop")
-                mp_pd.join()
-                print(self.get_trstr(exit_status) + "peopledetection exited!")
-        mp_wf = self.state_data.mpp_webflask
-        trstr = self.get_trstr(exit_status)
-        if mp_wf:
-            if mp_wf.pid:
-                os.kill(mp_wf.pid, signal.SIGFPE)
-                time.sleep(0.2)
-                print(trstr + "joining flask webserver, this may take a while ...")
-                os.kill(mp_wf.pid, signal.SIGTERM)
-                mp_wf.join(timeout=10)
-                if mp_wf.is_alive():
-                    os.kill(mp_wf.pid, signal.SIGQUIT)
-                    mp_wf.join()
-                print(self.get_trstr(exit_status) + "flask webserver exited!")
-        trstr = self.get_trstr(exit_status)
-        if self.mp_loglistener:
-            if self.mp_loglistener.pid:
-                print(trstr + "joining loglistener ...")
-                mplogging.stop_logging_listener(self.mp_loggerqueue, self.mp_loglistener)
-                self.mp_loglistener.join(timeout=5)
-                if self.mp_loglistener.is_alive():
-                    print(trstr + "killing loglistener")
-                    os.kill(self.mp_loglistener.pid, signal.SIGKILL)
-                print(self.get_trstr(exit_status) + "loglistener exited!")
+	def shutdown(self, exit_status=1):
+		trstr = self.get_trstr(exit_status)
+		if self.state_data.TG and self.state_data.TG.running:
+			self.state_data.TG.stop()
+		if self.state_data.KB and self.state_data.KB.active:
+			self.state_data.KB.stop()
+			self.state_data.KB.join()
+		mp_pd = self.state_data.mpp_peopledetection
+		if mp_pd:
+			if mp_pd.pid:
+				print(trstr + "joining peopledetection ...")
+				self.state_data.PD_OUTQUEUE.put("stop")
+				mp_pd.join()
+				print(self.get_trstr(exit_status) + "peopledetection exited!")
+		mp_wf = self.state_data.mpp_webflask
+		trstr = self.get_trstr(exit_status)
+		if mp_wf:
+			if mp_wf.pid:
+				os.kill(mp_wf.pid, signal.SIGFPE)
+				time.sleep(0.2)
+				print(trstr + "joining flask webserver, this may take a while ...")
+				os.kill(mp_wf.pid, signal.SIGTERM)
+				mp_wf.join(timeout=10)
+				if mp_wf.is_alive():
+					os.kill(mp_wf.pid, signal.SIGQUIT)
+					mp_wf.join()
+				print(self.get_trstr(exit_status) + "flask webserver exited!")
+		trstr = self.get_trstr(exit_status)
+		if self.mp_loglistener:
+			if self.mp_loglistener.pid:
+				print(trstr + "joining loglistener ...")
+				mplogging.stop_logging_listener(self.mp_loggerqueue, self.mp_loglistener)
+				self.mp_loglistener.join(timeout=5)
+				if self.mp_loglistener.is_alive():
+					print(trstr + "killing loglistener")
+					os.kill(self.mp_loglistener.pid, signal.SIGKILL)
+				print(self.get_trstr(exit_status) + "loglistener exited!")
 
 
 def input_raise_to(a, b):
-    raise TimeoutError
+	raise TimeoutError
 
 
 def input_to(fn, timeout, queue):
-    signal.signal(signal.SIGALRM, input_raise_to)
-    signal.signal(signal.SIGINT, input_raise_to)
-    signal.signal(signal.SIGTERM, input_raise_to)
-    signal.alarm(timeout)
-    sys.stdin = os.fdopen(fn)
-    try:
-        msg = input()
-        signal.alarm(0)
-        queue.put(msg)
-    except TimeoutError:
-        signal.alarm(0)
-        queue.put(None)
-    except Exception:
-        pass
+	signal.signal(signal.SIGALRM, input_raise_to)
+	signal.signal(signal.SIGINT, input_raise_to)
+	signal.signal(signal.SIGTERM, input_raise_to)
+	signal.alarm(timeout)
+	sys.stdin = os.fdopen(fn)
+	try:
+		msg = input()
+		signal.alarm(0)
+		queue.put(msg)
+	except TimeoutError:
+		signal.alarm(0)
+		queue.put(None)
+	except Exception:
+		pass
 
 
 class StateData:
-    def __init__(self):
-        self.PD_ACTIVE = False
-        self.mpp_peopledetection = None
-        self.mpp_webflask = None
-        self.TG = None
-        self.KB = None
-        self.PD_INQUEUE = None
-        self.PD_OUTQUEUE = None
-        self.NS_INQUEUE = None
-        self.NS_OUTQUEUE = None
-        self.MAINQUEUE = None
-        self.DIRS = None
-        self.DO_RECORD = False
-        self.CAMERADATA = []
-        self.CAMERA_CONFIG = []
-        self.NET_CONFIG = None
-        self.SSH = None
+	def __init__(self):
+		self.PD_ACTIVE = False
+		self.mpp_peopledetection = None
+		self.mpp_webflask = None
+		self.TG = None
+		self.KB = None
+		self.PD_INQUEUE = None
+		self.PD_OUTQUEUE = None
+		self.NS_INQUEUE = None
+		self.NS_OUTQUEUE = None
+		self.MAINQUEUE = None
+		self.DIRS = None
+		self.DO_RECORD = False
+		self.CAMERADATA = []
+		self.CAMERA_CONFIG = []
+		self.SSH_CONFIG = []
+
 
 
 class KeyboardThread(Thread):
@@ -433,6 +433,9 @@ def mainloop():
 	# get camera data
 	cfgr = ConfigReader(cfg)
 	state_data.CAMERA_CONFIG = cfgr.get_cameras()
+
+	# get ssh data & commands
+	state_data.SSH_CONFIG = cfgr.get_ssh()
 
 	# init logger
 	print(str(datetime.datetime.now()) + ": main log file is - " + dirs["logs"] + "guck.log")

@@ -357,10 +357,23 @@ def get_ssh_results(state_data):
             stdin, stdout, stderr = ssh_client.exec_command(command)
             res0 = stdout.readlines()
             res00 = []
+
             if command.lower() == "temp":
+                n0 = 0
+                sum0 = 0
                 for r0 in res0:
                     if "dev.cpu" in r0:
-                        res00.append(r0)
+                        try:
+                            tempstr = r0.split(" ")[1]
+                            sum0 += float("".join(s1 for s1 in tempstr if s1.isdigit() or s1 == "."))
+                            n0 += 1
+                        except Exception:
+                            pass
+                try:
+                    sum0 = sum0 / n0
+                except Exception:
+                    sum0 = 0
+                res00.append(str(round(sum0, 1)) + "C")
             res0list = [hostname, command, res00]
             reslist.append(res0list)
             ssh_client.close()
@@ -503,16 +516,16 @@ def get_status(state_data, version):
 
     temp, hum = get_sens_temp()
     ret += "\n------- Sensors -------"
-    ret += "\nTemperature:  " + "%.1f" % temp + "C"
+    ret += "\nTemperature: " + "%.1f" % temp + "C"
     ret += "\nHumidity: " + "%.1f" % hum + "%"
     ret += "\n------- SSH commands -------"
     ssh_reslist = get_ssh_results(state_data)
     for sshr in ssh_reslist:
         ssh_hostname, ssh_command, ssh_res0 = sshr
-        ret += "\n--- " + str(ssh_hostname) + " > " + str(ssh_command) + "\n"
+        ret += "\n--- " + str(ssh_hostname) + " > " + str(ssh_command)
         for l0 in ssh_res0:
-            ret += "      " + l0
-    ret += "------- System Summary -------"
+            ret += "\n        " + l0
+    ret += "\n------- System Summary -------"
     ret += "\nRAM: "
     ret += "CRITICAL!" if mem_crit else "OK!"
     ret += "\nCPU: "

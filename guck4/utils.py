@@ -356,7 +356,12 @@ def get_ssh_results(state_data):
             ssh_client.connect(hostname, username=username, key_filename=idrsa_file)
             stdin, stdout, stderr = ssh_client.exec_command(command)
             res0 = stdout.readlines()
-            res0list = [hostname, command, res0]
+            res00 = []
+            if command.lower() == "temp":
+                for r0 in res0:
+                    if "dev.cpu" in r0:
+                        res00.append(r0)
+            res0list = [hostname, command, res00]
             reslist.append(res0list)
             ssh_client.close()
         except Exception:

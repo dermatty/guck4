@@ -7,7 +7,7 @@ import cv2
 
 import fridagram as fg
 
-from guck4 import setup_dirs, mplogging, peopledetection, clear_all_queues, ConfigReader, NetConfigReader
+from guck4 import setup_dirs, mplogging, peopledetection, clear_all_queues, ConfigReader, check_cam_health
 from guck4 import get_status, get_free_photos, webflask, __version__, __startmode__, __appname__, __appabbr__
 
 from .mplogging import whoami
@@ -640,6 +640,13 @@ def mainloop():
 						state_data.mpp_peopledetection.join()
 						state_data.PD_ACTIVE = False
 				TERMINATED = True
+
+			# check camera state + restart if needed
+			cam_health = check_cam_health(state_data.CAMERADATA)
+			for cname in cam_health:
+				if cam_health[cname].upper() == "DOWN":
+					logger.warning(whoami() + ": camera " + str(cname) + "down, restarting ...")
+
 		except (queue.Empty, EOFError):
 			pass
 		except Exception:

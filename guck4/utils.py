@@ -402,6 +402,28 @@ def get_sens_temp(hostn="raspisens", filen="/home/pi/sens.txt"):
     return temp, hum
 
 
+def check_cam_health(state_data):
+    cam_health = {}
+    for c in state_data.CAMERADATA:
+        cname, cframe, c_fps, cisok, cactive, ctx = c
+        if not cactive:
+            c_status = "DISABLED"
+            dt = -1
+        else:
+            try:
+                dt = time.time() - ctx
+            except Exception:
+                dt = 31
+            if dt > 30 or not cisok:
+                c_status = "DOWN"
+            elif dt > 3:
+                c_status = "DELAYED"
+            else:
+                c_status = "RUNNING"
+        cam_health[cname] = {"status": c_status, "fps": c_fps, "dt": dt}
+    return cam_health
+
+
 def get_status(state_data, version):
     osversion = os.popen("cat /etc/os-release").read().split("\n")[2].split("=")[1].replace('"', '')
 

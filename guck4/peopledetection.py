@@ -380,6 +380,17 @@ class Camera(Thread):
         self.logger.debug(whoami() + "camera " + self.cname + " recording stopped")
 
 
+def restart_cam(cameras, cname0):
+    for c in cameras:
+        if c.cname == cname0 and c.active():
+            c.stop()
+            c.start()
+            while not c.startup_completed:
+                time.sleep(0.05)
+            if not c.mpp:
+                c.join(timeout=3)
+
+
 def shutdown_cams(cameras):
     for c in cameras:
         if c.active:
@@ -509,6 +520,10 @@ def run_cameras(pd_outqueue, pd_inqueue, dirs, cfg, mp_loggerqueue):
                 start_all_recordings(cameras)
             elif cmd == "record off":
                 stop_all_recordings(cameras)
+            elif cmd == "restart_cam":
+                cname = param
+                logger.info(whoami() + "force restarting camera + " + str(cname))
+                restart_cam(cameras, cname)
         except (queue.Empty, EOFError):
             continue
         except Exception:

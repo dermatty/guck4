@@ -198,7 +198,7 @@ class Camera(Thread):
         self.logger.debug(whoami() + "camera " + self.cname + " starting shutdown initialize")
         if self.outvideo:
             self.outvideo.release()
-            self.logger.debug(whoami() + "camera " + self.cname + " recording stopped")
+            self.logger.debug(whoami() + "camera " + self.cname + " video released!")
         try:
             self.parent_pipe.send("stop")
             t0 = time.time()
@@ -281,31 +281,42 @@ class Camera(Thread):
             try:
                 self.parent_pipe.send("query")
             except Exception as e:
-                self.logger.warning(whoami() + str(e) + ": error in communication with camera " + self.cname)
-                self.running = False
-                self.isok = False
-                break
+                self.logger.warning(whoami() + str(e) + ": error in communication (pipe_send)  with camera " + self.cname)
+                self.newframe = False
+                time.sleep(1.0)
+                continue
+                #self.running = False
+                #self.isok = False
+                #break
             while True:
                 cond1 = self.running
                 cond2 = self.parent_pipe.poll()
                 if not cond1 or cond2:
                     break
                 time.sleep(0.01)
-            if cond1 and not cond2:  # stopped and no poll
+            if not cond1:
                 break
+            if not cond2:
+                self.newframe = False
+                time.sleep(1.0)
+                continue
+            #if cond1 and not cond2:  # stopped and no poll
+            #    break
             ret, frame0, rects, tx = self.parent_pipe.recv()
             self.tx = tx
             t_reply = time.time()
             with self.lock:
                 self.fpslist.append(1 / (t_reply - t_query))
-            self.isok = ret
             if not cond1:
                 break
-            if not self.isok:
-                self.logger.warning(whoami() + ": error in communication with camera " + self.cname)
-                self.running = False
-                break
-            if ret:
+            if not ret:
+                self.logger.warning(whoami() + ": error in communication (ret) with camera " + self.cname)
+                self.newframe = False
+                time.sleep(1.0)
+                continue
+                #self.running = False
+                #break
+            else:
                 if self.frame is not None:
                     self.oldframe = self.frame.copy()
                 else:
@@ -479,7 +490,7 @@ def run_cameras(pd_outqueue, pd_inqueue, dirs, cfg, mp_loggerqueue):
     lastdetection_tt = 0
     while not TERMINATED:
 
-        time.sleep(0.02)
+        time.sleep(0.05)
 
         mainmsglist = []
         for c in cameras:

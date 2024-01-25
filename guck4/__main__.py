@@ -152,7 +152,7 @@ class StateData:
 		self.DIRS = None
 		self.DO_RECORD = False
 		self.CAMERADATA = []
-		self.CAMERA_RESTARTS = {}
+		self.CAMERA_RESTART_TIME = {}
 		self.CAMERA_CONFIG = []
 		self.SSH_CONFIG = []
 
@@ -251,14 +251,6 @@ class TelegramThread(Thread):
 				self.logger.debug("starting receive_message")
 				# ok, rlist, err0 = self.receive_message()
 				ok, rlist, err0 = fg.receive_message(self.token)
-				self.logger.debug(
-					"received message "
-					+ str(ok)
-					+ " / "
-					+ str(rlist)
-					+ " / "
-					+ str(err0)
-				)
 				if ok and rlist:
 					lastt0 = time.time()
 					for chat_id, text in rlist:
@@ -280,7 +272,7 @@ class TelegramThread(Thread):
 					self.logger.info("Received answer on clear_bot: " + str(clearbot_answer))
 					last_tg_cleanup = time.time()
 				elif time.time() - lastt0 > _HEARTBEAT_FRQ * 60 or not ok:
-					self.logger.info("Sending getme - heartbeat to bot ...")
+					self.logger.debug("Sending getme - heartbeat to bot ...")
 					heartbeat_answer = fg.get_me(self.token)
 					if not heartbeat_answer:
 						self.logger.warning(
@@ -505,6 +497,7 @@ def mainloop():
 	pd_cmd = None
 
 	lastt_stdout = time.time()
+	lastt_camcheck = time.time() - 4*60
 
 	while not TERMINATED:
 
@@ -641,22 +634,6 @@ def mainloop():
 						state_data.mpp_peopledetection.join()
 						state_data.PD_ACTIVE = False
 				TERMINATED = True
-
-			# check camera state + restart if needed
-			if state_data.mpp_peopledetection:
-				cam_health = check_cam_health(state_data.CAMERADATA)
-				for cname in cam_health:
-					if cam_health[cname].upper() == "DOWN":
-						try:
-							lastt0 = state_data.CAMERA_RESTARTS[cname]
-							if time.time() - lastt0 > 5 * 60:
-								del state_data.CAMERA_RESTARTS[cname]
-						except Exception:
-							# only restart if no restart within last 5 mins
-							state_data.PD_OUTQUEUE.put(("restart_cam", cname))
-							state_data.CAMERA_RESTARTS[cname] = time.time()
-							logger.warning(whoami() + ": camera " + str(cname) + "down, force restarting ...")
-
 
 		except (queue.Empty, EOFError):
 			pass

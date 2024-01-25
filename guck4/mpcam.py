@@ -261,7 +261,6 @@ def run_cam(cfg, options, child_pipe, mp_loggerqueue):
     logger = mplogging.setup_logger(mp_loggerqueue, __file__)
     logger.info(whoami() + "starting ...")
 
-    event_stopped = threading.Event()
     sh = SigHandler_mpcam(logger)
     signal.signal(signal.SIGINT, sh.sighandler_mpcam)
     signal.signal(signal.SIGTERM, sh.sighandler_mpcam)
@@ -280,6 +279,8 @@ def run_cam(cfg, options, child_pipe, mp_loggerqueue):
     waitnext_delta = 0.01
     oldt = time.time()
     MAXFPS = tm.target_fps
+
+    cam_down = False
 
     while not TERMINATED:
         try:
@@ -303,11 +304,27 @@ def run_cam(cfg, options, child_pipe, mp_loggerqueue):
                     logger.error(whoami() + "Couldn't capture frame in main loop!")
                     exp0 = (ret, None, [], None)
                     child_pipe.send(exp0)
-                    continue
+                    cam_down = True
+
         except Exception as e:
             logger.error(whoami() + str(e))
             exp0 = (False, None, [], None)
             child_pipe.send(exp0)
+            cam_down = True
+
+        if cam_down:
+            logger.info(whoami() + ": camera down, stopping ... ")
+            tm.stop()
+            tm.join()
+            logger.info(whoami() + ": camera down, stopped, waiting for 30secs ... ")
+            time.sleep(30)
+            logger.info(whoami() + ": camera down, starting ... ")
+            tm = NewMatcherThread(cfg, options, logger)
+            tm.start()
+            while tm.startup:
+                time.sleep(0.03)
+            logger.info(whoami() + ": camera down, started!")
+            cam_down = False
 
     tm.stop()
     tm.join()

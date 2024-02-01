@@ -248,7 +248,7 @@ class TelegramThread(Thread):
 		self.logger.info(whoami() + "telegram handler/bot started!")
 		while self.running:
 			try:
-				self.logger.debug("starting receive_message")
+				# self.logger.debug("starting receive_message")
 				# ok, rlist, err0 = self.receive_message()
 				ok, rlist, err0 = fg.receive_message(self.token)
 				if ok and rlist:

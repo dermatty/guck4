@@ -351,6 +351,7 @@ def get_ssh_results(state_data):
             username = s["username"]
             idrsa_file = s["idrsa_file"],
             command = s["command"]
+            command0 = command
             ssh_client = paramiko.SSHClient()
             ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh_client.connect(hostname, username=username, key_filename=idrsa_file)
@@ -358,7 +359,24 @@ def get_ssh_results(state_data):
             res0 = stdout.readlines()
             res00 = []
 
+            if command.lower() == "/home/stephan/sens":
+                command0 = "sens"
+                tempstr = "-/-"
+                hum = "-/-"
+                cpu_temp = "-/-"
+                for r0 in res0:
+                    try:
+                        tempstr0 = r0.split(" ")
+                        tempstr = str(round(float(tempstr0[2]), 1)) + "°C"
+                        hum = str(round(float(tempstr0[3]), 1)) + "%"
+                        cpu_temp = str(round(float(tempstr0[4]), 1)) + "°C"
+                    except Exception:
+                        pass
+                    res00.append("room: " + tempstr + " / hum.: " + hum + " / cpu: " + cpu_temp)
+                    break
+
             if command.lower() == "temp":
+                command0 = "temp"
                 n0 = 0
                 sum0 = 0
                 for r0 in res0:
@@ -373,8 +391,9 @@ def get_ssh_results(state_data):
                     sum0 = sum0 / n0
                 except Exception:
                     sum0 = 0
-                res00.append(str(round(sum0, 1)) + "C")
-            res0list = [hostname, command, res00]
+                res00.append("cpu: " + str(round(sum0, 1)) + "°C")
+
+            res0list = [hostname, command0, res00]
             reslist.append(res0list)
             ssh_client.close()
         except Exception:
@@ -539,17 +558,17 @@ def get_status(state_data, version):
                         cam_crit = False
                 ret += "\n" + cname + " " + ctstatus0 + " @ %3.1f fps" % cfps + ", (%.2f" % dt + " sec. ago)"
 
-    temp, hum = get_sens_temp()
-    ret += "\n------- Sensors -------"
-    ret += "\nTemperature: " + "%.1f" % temp + "C"
-    ret += "\nHumidity: " + "%.1f" % hum + "%"
-    ret += "\n------- SSH commands -------"
+    #temp, hum = get_sens_temp()
+    #ret += "\n------- Sensors -------"
+    #ret += "\nTemperature: " + "%.1f" % temp + "C"
+    #ret += "\nHumidity: " + "%.1f" % hum + "%"
+    #ret += "\n------- SSH commands -------"
     ssh_reslist = get_ssh_results(state_data)
     for sshr in ssh_reslist:
         ssh_hostname, ssh_command, ssh_res0 = sshr
         ret += "\n--- " + str(ssh_hostname) + " > " + str(ssh_command)
         for l0 in ssh_res0:
-            ret += "\n        " + l0
+            ret += "\n   " + l0
     ret += "\n------- System Summary -------"
     ret += "\nRAM: "
     ret += "CRITICAL!" if mem_crit else "OK!"

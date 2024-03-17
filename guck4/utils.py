@@ -400,7 +400,7 @@ def get_ssh_results(state_data):
             pass
     return reslist
 
-def get_sens_temp(hostn="raspisens", filen="/home/pi/sens.txt"):
+"""def get_sens_temp(hostn="raspisens", filen="/home/pi/sens.txt"):
     procstr = "cat " + filen
     ssh = subprocess.Popen(["ssh", hostn, procstr], shell=False, stdout=subprocess.PIPE, stderr=subprocess. PIPE)
     sshres = ssh.stdout.readlines()
@@ -418,7 +418,7 @@ def get_sens_temp(hostn="raspisens", filen="/home/pi/sens.txt"):
     if n > 0:
         temp = temp / n
         hum = hum / n
-    return temp, hum
+    return temp, hum"""
 
 
 def check_cam_health(state_data):
@@ -498,7 +498,7 @@ def get_status(state_data, version):
             if feature.label[0:4] == "Core":
                 temp0 = feature.get_value()
                 cpu_temp.append(temp0)
-                ret += "\nCPU " + feature.label + " temp.: " + str(round(temp0, 2)) + "°"
+                ret += "\nCPU " + feature.label + " temp.: " + str(round(temp0, 2)) + "°C"
     sensors.cleanup()
     if len(cpu_temp) > 0:
         avg_cpu_temp = sum(c for c in cpu_temp)/len(cpu_temp)

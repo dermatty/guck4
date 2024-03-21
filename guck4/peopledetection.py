@@ -35,7 +35,7 @@ class SigHandler_pd:
     def shutdown(self):
         global TERMINATED
         TERMINATED = True
-        self.logger.debug(whoami() + "got signal, exiting ...")
+        self.logger.debug("got signal, exiting ...")
 
 
 class TorchResNet:
@@ -55,9 +55,9 @@ class TorchResNet:
                 # self.RESNETMODEL = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True).to(self.device)
                 self.RESNETMODEL.eval()
                 self.active = True
-                self.logger.info(whoami() + "Torchvision Resnet initialized!")
+                self.logger.info("Torchvision Resnet initialized!")
             except Exception as e:
-                self.logger.error(whoami() + str(e) + ": cannot init Torchvision Resnet!")
+                self.logger.error(str(e) + ": cannot init Torchvision Resnet!")
                 self.RESNETMODEL = None
 
     def image_loader(self, img_cv2):
@@ -73,7 +73,7 @@ class TorchResNet:
             return []
         try:
             t0 = time.time()
-            # self.logger.debug(whoami() + "-------- >>> " + camera.cname + ": performing resnet classification with " + str(len(camera.rects)) + " opencv detections ...")
+            # self.logger.debug("-------- >>> " + camera.cname + ": performing resnet classification with " + str(len(camera.rects)) + " opencv detections ...")
 
             # get min & max value from rects
             camera.cnn_classified_list = []
@@ -125,7 +125,7 @@ class TorchResNet:
             camera.cnn_classified_list = [(box[0], box[1], box[2] - box[0], box[3] - box[1], labels[i]) for i, box in
                                           enumerate(boxes)]
         except Exception as e:
-            self.logger.error(whoami() + str(e) + camera.cname + ": ResNet classification error!")
+            self.logger.error(str(e) + camera.cname + ": ResNet classification error!")
             camera.cnn_classified_list = []
         return
 
@@ -176,12 +176,12 @@ class Camera(Thread):
             self.hog_thresh = ccfg["hog_thresh"]
             self.mog2_sensitivity = ccfg["mog2_sensitivity"]
         except Exception as e:
-            self.logger.error(whoami() + str(e))
+            self.logger.error(str(e))
 
         try:
             self.fourcc = cv2.VideoWriter_fourcc('X', 'V', 'I', 'D')
         except Exception:
-            self.logger.error(whoami() + "Cannot get fourcc, no recording possible")
+            self.logger.error("Cannot get fourcc, no recording possible")
             self.fourcc = None
 
     def get_fps(self):
@@ -195,10 +195,10 @@ class Camera(Thread):
         return fps
 
     def shutdown(self):
-        self.logger.debug(whoami() + "camera " + self.cname + " starting shutdown initialize")
+        self.logger.debug("camera " + self.cname + " starting shutdown initialize")
         if self.outvideo:
             self.outvideo.release()
-            self.logger.debug(whoami() + "camera " + self.cname + " video released!")
+            self.logger.debug("camera " + self.cname + " video released!")
         try:
             self.parent_pipe.send("stop")
             t0 = time.time()
@@ -220,14 +220,14 @@ class Camera(Thread):
                 if self.mpp.is_alive():
                     os.kill(self.mpp.pid, signal.SIGTERM)
         self.mpp = None
-        self.logger.debug(whoami() + "camera " + self.cname + " mpp stopped!")
+        self.logger.debug("camera " + self.cname + " mpp stopped!")
         try:
             cv2.destroyWindow(self.cname)
         except Exception:
             pass
         self.stop_recording()
         self.frame = None
-        self.logger.debug(whoami() + "camera " + self.cname + " shutdown finished!")
+        self.logger.debug("camera " + self.cname + " shutdown finished!")
         return 1
 
     def startup_cam(self):
@@ -243,29 +243,29 @@ class Camera(Thread):
             self.isok = False
             self.active = False
         if self.isok:
-            self.logger.debug(whoami() + "camera " + self.cname + " started!")
+            self.logger.debug("camera " + self.cname + " started!")
         else:
-            self.logger.debug(whoami() + "camera " + self.cname + " out of function, not started!")
+            self.logger.debug("camera " + self.cname + " out of function, not started!")
             self.mpp.join()
             self.mpp = None
         return self.mpp
 
     def stop(self):
         if self.shutdown_completed and not self.mpp:
-            self.logger.warning(whoami() + self.cname + " shutdown already completed, exiting ...")
+            self.logger.warning(self.cname + " shutdown already completed, exiting ...")
             return 1
         elif self.shutdown_completed and self.mpp:
-            self.logger.warning(whoami() + self.cname + " shutdown only half completed, aborting !!!")
+            self.logger.warning(self.cname + " shutdown only half completed, aborting !!!")
             return -1
-        self.logger.debug(whoami() + "setting stop for " + self.cname)
+        self.logger.debug("setting stop for " + self.cname)
         self.running = False
         t0 = time.time()
         while not self.shutdown_completed and time.time() - t0 < 10:
             time.sleep(0.1)
         if not self.shutdown_completed:
-            self.logger.error(whoami() + self.cname + " shutdown sequence timed out, aborting !!!!")
+            self.logger.error(self.cname + " shutdown sequence timed out, aborting !!!!")
         else:
-            self.logger.debug(whoami() + "shutdown completed for " + self.cname)
+            self.logger.debug("shutdown completed for " + self.cname)
 
     def run(self):
         if not self.active or not self.isok:
@@ -281,7 +281,7 @@ class Camera(Thread):
             try:
                 self.parent_pipe.send("query")
             except Exception as e:
-                self.logger.warning(whoami() + str(e) + ": error in communication (pipe_send)  with camera " + self.cname)
+                self.logger.warning(str(e) + ": error in communication (pipe_send)  with camera " + self.cname)
                 self.newframe = False
                 time.sleep(1.0)
                 continue
@@ -310,7 +310,7 @@ class Camera(Thread):
             if not cond1:
                 break
             if not ret:
-                self.logger.warning(whoami() + ": error in communication (ret) with camera " + self.cname)
+                self.logger.warning(": error in communication (ret) with camera " + self.cname)
                 self.newframe = False
                 time.sleep(1.0)
                 continue
@@ -329,7 +329,7 @@ class Camera(Thread):
             self.rects = rects
         self.shutdown()
         self.shutdown_completed = True
-        self.logger.debug(whoami() + ": camera " + self.cname + " - thread completed!")
+        self.logger.debug(": camera " + self.cname + " - thread completed!")
 
     def get_new_detections(self, cnn=True):
         if cnn:
@@ -364,7 +364,7 @@ class Camera(Thread):
             return None
         if not self.fourcc:
             self.is_recording = False
-            self.logger.debug(whoami() + "camera " + self.cname + " no recording possible due to missing fourcc/codec!")
+            self.logger.debug("camera " + self.cname + " no recording possible due to missing fourcc/codec!")
         if self.outvideo:
             try:
                 self.outvideo.release()
@@ -375,7 +375,7 @@ class Camera(Thread):
         self.recordfile = self.dirs["video"] + self.cname + "_" + datestr + ".avi"
         self.outvideo = cv2.VideoWriter(self.recordfile, self.fourcc, 10.0, (self.xmax, self.ymax))
         self.is_recording = True
-        self.logger.debug(whoami() + "camera " + self.cname + " recording started: " + self.recordfile)
+        self.logger.debug("camera " + self.cname + " recording started: " + self.recordfile)
 
     def write_record(self):
         if not self.active or not self.isok:
@@ -388,7 +388,7 @@ class Camera(Thread):
             self.outvideo.release()
             self.outvideo = None
         self.is_recording = False
-        self.logger.debug(whoami() + "camera " + self.cname + " recording stopped")
+        self.logger.debug("camera " + self.cname + " recording stopped")
 
 
 def restart_cam(cameras, cname0):
@@ -449,7 +449,7 @@ def run_cameras(pd_outqueue, pd_inqueue, dirs, cfg, mp_loggerqueue):
     # tf.autograph.set_verbosity(1)
 
     logger = mplogging.setup_logger(mp_loggerqueue, __file__)
-    logger.info(whoami() + "starting ...")
+    logger.info("starting ...")
 
     sh = SigHandler_pd(logger)
     signal.signal(signal.SIGINT, sh.sighandler_pd)
@@ -464,7 +464,7 @@ def run_cameras(pd_outqueue, pd_inqueue, dirs, cfg, mp_loggerqueue):
         cameras.append(camera)
 
     startup_cams(cameras)
-    logger.info(whoami() + "all cameras started!")
+    logger.info("all cameras started!")
 
     tgram_active = False
     kbd_active = False
@@ -474,7 +474,7 @@ def run_cameras(pd_outqueue, pd_inqueue, dirs, cfg, mp_loggerqueue):
     elif pd_in_cmd == "kbd_active":
         kbd_active = pd_in_param
     if not camera_config or not cameras:
-        logger.error(whoami() + "cannot get correct config for cameras, exiting ...")
+        logger.error("cannot get correct config for cameras, exiting ...")
         pd_outqueue.put(("error:config", None))
         sys.exit()
     else:
@@ -484,7 +484,7 @@ def run_cameras(pd_outqueue, pd_inqueue, dirs, cfg, mp_loggerqueue):
     try:
         showframes = (options["showframes"].lower() == "yes")
     except Exception:
-        logger.warning(whoami() + "showframes not set in config, setting to default False!")
+        logger.warning("showframes not set in config, setting to default False!")
         showframes = False
 
     lastdetection_tt = 0
@@ -513,7 +513,7 @@ def run_cameras(pd_outqueue, pd_inqueue, dirs, cfg, mp_loggerqueue):
                             mainmsg = "detection"
                         c.clear_new_detections()
                 except Exception as e:
-                    logger.warning(whoami() + str(e))
+                    logger.warning(str(e))
             mainmsglist.append((mainmsg, mainparams))
 
         # send to __main__.py
@@ -524,7 +524,7 @@ def run_cameras(pd_outqueue, pd_inqueue, dirs, cfg, mp_loggerqueue):
 
         try:
             cmd, param = pd_inqueue.get_nowait()
-            logger.debug(whoami() + "received " + cmd)
+            logger.debug("received " + cmd)
             if cmd == "stop":
                 break
             elif cmd == "record on":
@@ -533,7 +533,7 @@ def run_cameras(pd_outqueue, pd_inqueue, dirs, cfg, mp_loggerqueue):
                 stop_all_recordings(cameras)
             elif cmd == "restart_cam":
                 cname = param
-                logger.info(whoami() + "force restarting camera + " + str(cname))
+                logger.info("force restarting camera + " + str(cname))
                 restart_cam(cameras, cname)
         except (queue.Empty, EOFError):
             continue
@@ -542,4 +542,4 @@ def run_cameras(pd_outqueue, pd_inqueue, dirs, cfg, mp_loggerqueue):
 
     shutdown_cams(cameras)
     clear_all_queues([pd_inqueue, pd_outqueue])
-    logger.info(whoami() + "... exited!")
+    logger.info("... exited!")

@@ -89,7 +89,7 @@ class NewMatcherThread(Thread):
                 self.target_fps = 1
         except Exception as e:
             self.target_fps = 8
-        self.logger.debug(whoami() + "Setting target_fps to " + str(self.target_fps))
+        self.logger.debug("Setting target_fps to " + str(self.target_fps))
         # get bgsubtractor
         try:
             self.bgsubtractor = self.options["bgsubtractor"]
@@ -97,7 +97,7 @@ class NewMatcherThread(Thread):
                 self.bgsubtractor = "KNN"
         except:
             self.bgsubtractor = "KNN"
-        self.logger.debug(whoami() + "Setting background subtractor to " + self.bgsubtractor)
+        self.logger.debug("Setting background subtractor to " + self.bgsubtractor)
         if self.bgsubtractor == "KNN":
             self.setFGBG_KNN()
         elif self.bgsubtractor == "CNT":
@@ -138,7 +138,7 @@ class NewMatcherThread(Thread):
                         if ret:
                             self.frame_grabbed.set()
                 except Exception as e:
-                    self.logger.error(whoami() + "Cannot grab frame for " + self.NAME + ": " + str(e))
+                    self.logger.error("Cannot grab frame for " + self.NAME + ": " + str(e))
                     ret = False
                 if not ret:
                     self.running = False
@@ -158,14 +158,14 @@ class NewMatcherThread(Thread):
         else:
             hist = int(500 + (5 - ms) * 70)
         self.FGBG = cv2.createBackgroundSubtractorKNN(history=hist, detectShadows=False)
-        self.logger.info(whoami() + "Created BackgroundSubtractorKNN")
+        self.logger.info("Created BackgroundSubtractorKNN")
         return
 
     def setFGBG_CNT(self):
         self.FGBG = cv2.bgsegm.createBackgroundSubtractorCNT(minPixelStability=self.target_fps, useHistory=True,
                                                              maxPixelStability=self.target_fps * 60,
                                                              detectShadows=False)
-        self.logger.info(whoami() + "Created BackgroundSubtractorCNT")
+        self.logger.info("Created BackgroundSubtractorCNT")
         return
 
     # MOG2 is on GPU if possible
@@ -183,11 +183,11 @@ class NewMatcherThread(Thread):
                 self.FGBG_GPU = cv2.cuda.createBackgroundSubtractorMOG2()
                 self.CUDA_STREAM_0 = cv2.cuda_Stream()
                 self.FRAME_CUDA = None
-                self.logger.info(whoami() + "Created BackgroundSubtractorMOG2 on GPU")
+                self.logger.info("Created BackgroundSubtractorMOG2 on GPU")
             except Exception as e:
                 self.NO_GPUS = 0
                 self.setMOG2_ON_CPU()
-                self.logger.warning(whoami() + "Created BackgroundSubtractorMOG2 on CPU, GPU setup failed!")
+                self.logger.warning("Created BackgroundSubtractorMOG2 on CPU, GPU setup failed!")
         return
 
     def setMOG2_ON_CPU(self):
@@ -197,7 +197,7 @@ class NewMatcherThread(Thread):
         else:
             hist = int(500 + (5 - ms) * 70)
         self.FGBG = cv2.createBackgroundSubtractorMOG2(history=hist, detectShadows=False)
-        self.logger.info(whoami() + "Created BackgroundSubtractorMOG2 on CPU")
+        self.logger.info("Created BackgroundSubtractorMOG2 on CPU")
 
     def get_caption_and_process(self):
         ret = self.frame_grabbed.wait(2)
@@ -223,7 +223,7 @@ class NewMatcherThread(Thread):
                 # self.CUDA_STREAM_0.waitForCompletion()
                 fggray = self.FRAME_CUDA.download()
             except Exception as e:
-                self.logger.warning(whoami() + str(e))
+                self.logger.warning(str(e))
                 return False, None, None, time.time()
         # else if on CPU
         else:
@@ -231,7 +231,7 @@ class NewMatcherThread(Thread):
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 fggray = self.FGBG.apply(gray, 1 / self.HIST)
             except Exception as e:
-                self.logger.warning(whoami() + str(e))
+                self.logger.warning(str(e))
                 return False, None, None, time.time()
 
         # all the other stuff besides bgsub is on cpu!!
@@ -244,7 +244,7 @@ class NewMatcherThread(Thread):
             rects = [(x, y, w, h) for x, y, w, h in cnts0 if w * h > self.MINAREA]
             return ret, rects, frame, time.time()
         except Exception as e:
-            self.logger.warning(whoami() + str(e))
+            self.logger.warning(str(e))
             return False, None, None, time.time()
 
 
@@ -259,7 +259,7 @@ def run_cam(cfg, options, child_pipe, mp_loggerqueue):
     setproctitle(__appabbr__ + "." + cfg["name"] + "_" + os.path.basename(__file__))
 
     logger = mplogging.setup_logger(mp_loggerqueue, __file__)
-    logger.info(whoami() + "starting ...")
+    logger.info("starting ...")
 
     sh = SigHandler_mpcam(logger)
     signal.signal(signal.SIGINT, sh.sighandler_mpcam)
@@ -272,7 +272,7 @@ def run_cam(cfg, options, child_pipe, mp_loggerqueue):
     child_pipe.recv()
     child_pipe.send((tm.running, tm.YMAX0, tm.XMAX0))
     if not tm.running:
-        logger.error(whoami() + "cam is not working, aborting ...")
+        logger.error("cam is not working, aborting ...")
         sys.exit()
 
     waitnext = 0.01
@@ -301,32 +301,32 @@ def run_cam(cfg, options, child_pipe, mp_loggerqueue):
                     oldt = t0
                     time.sleep(waitnext)
                 else:
-                    logger.error(whoami() + "Couldn't capture frame in main loop!")
+                    logger.error("Couldn't capture frame in main loop!")
                     exp0 = (ret, None, [], None)
                     child_pipe.send(exp0)
                     cam_down = True
 
         except Exception as e:
-            logger.error(whoami() + str(e))
+            logger.error(str(e))
             exp0 = (False, None, [], None)
             child_pipe.send(exp0)
             cam_down = True
 
         if cam_down:
-            logger.info(whoami() + ": camera down, stopping ... ")
+            logger.info(": camera down, stopping ... ")
             tm.stop()
             tm.join()
-            logger.info(whoami() + ": camera down, stopped, waiting for 30secs ... ")
+            logger.info(": camera down, stopped, waiting for 30secs ... ")
             time.sleep(30)
-            logger.info(whoami() + ": camera down, starting ... ")
+            logger.info(": camera down, starting ... ")
             tm = NewMatcherThread(cfg, options, logger)
             tm.start()
             while tm.startup:
                 time.sleep(0.03)
-            logger.info(whoami() + ": camera down, started!")
+            logger.info(": camera down, started!")
             cam_down = False
 
     tm.stop()
     tm.join()
 
-    logger.info(whoami() + tm.NAME + " exited!")
+    logger.info(tm.NAME + " exited!")

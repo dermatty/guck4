@@ -64,7 +64,6 @@ class SigHandler_guck:
 		self.mp_loggerqueue = mp_loggerqueue
 		self.mp_loglistener = mp_loglistener
 
-
 	def sighandler_guck(self, a, b):
 		global TERMINATED
 		TERMINATED = True
@@ -193,13 +192,13 @@ class KeyboardThread(Thread):
 		if not self.active:
 			return
 		self.running = False
-		self.logger.debug(whoami() + "stopping keyboard thread")
+		self.logger.debug("stopping keyboard thread")
 		print("Stopping " +  __appname__ + " keyboard bot, this may take a second ...")
 
 	def run(self):
 		if not self.active:
 			return
-		self.logger.debug(whoami() + "starting keyboard thread")
+		self.logger.debug("starting keyboard thread")
 		self.running = True
 		instruction = ">> Enter '?' or 'help' for help"
 		print(instruction)
@@ -212,7 +211,7 @@ class KeyboardThread(Thread):
 				reply = GeneralMsgHandler(msg, "kbd", self.state_data)
 				print(reply)
 				print(instruction)
-		self.logger.debug(whoami() + "keyboard thread stopped!")
+		self.logger.debug("keyboard thread stopped!")
 
 
 class TelegramThread(Thread):
@@ -232,8 +231,8 @@ class TelegramThread(Thread):
 		if not self.active:
 			return -1
 
-		self.logger.debug(whoami() + "starting telegram handler")
-		self.logger.debug(whoami() + "telegram  token & chat ids: " + str(self.token) + " / " + str(self.chatids))
+		self.logger.debug("starting telegram handler")
+		self.logger.debug("telegram  token & chat ids: " + str(self.token) + " / " + str(self.chatids))
 
 		self.running = True
 
@@ -245,7 +244,7 @@ class TelegramThread(Thread):
 		self.logger.info("Received answer on first clear_bot: " + str(clearbot_answer))
 		self.running = True
 		self.heartbeatok = True
-		self.logger.info(whoami() + "telegram handler/bot started!")
+		self.logger.info("telegram handler/bot started!")
 		while self.running:
 			try:
 				# self.logger.debug("starting receive_message")
@@ -327,10 +326,10 @@ class TelegramThread(Thread):
 	def stop(self):
 		if not self.active or not self.running:
 			return
-		self.logger.debug(whoami() + "stopping telegram bot")
+		self.logger.debug("stopping telegram bot")
 		rep = "Stopping  telegram bot, this may take a while ..."
 		fg.send_message(self.token, self.chatids, rep)
-		self.logger.info(whoami() + "telegram bot stopped!")
+		self.logger.info("telegram bot stopped!")
 		self.running = False
 
 	def send_message_all(self, txt):
@@ -350,9 +349,9 @@ class TelegramThread(Thread):
 		try:
 			token = t["token"]
 			chatids = json.loads(t["chatids"])
-			self.logger.debug(whoami() + "got config for active telegram bot")
+			self.logger.debug("got config for active telegram bot")
 		except Exception as e:
-			self.logger.debug(whoami() + str(e) + "telegram config error, setting telegram to inactive!")
+			self.logger.debug(str(e) + "telegram config error, setting telegram to inactive!")
 			return False, None, None
 		return True, token, chatids
 
@@ -434,9 +433,9 @@ def mainloop():
 	print(str(datetime.datetime.now()) + ": main log file is - " + dirs["logs"] + "guck.log")
 	mp_loggerqueue, mp_loglistener = mplogging.start_logging_listener(dirs["logs"] + "guck.log", maxlevel=loglevel)
 	logger = mplogging.setup_logger(mp_loggerqueue, __file__)
-	logger.debug(whoami() + "starting with loglevel '" + loglevel_str + "'")
-	logger.info(whoami() + "Welcome to GUCK " + __version__)
-	logger.info(whoami() + "started with startmode " + __startmode__)
+	logger.debug("starting with loglevel '" + loglevel_str + "'")
+	logger.info("Welcome to GUCK " + __version__)
+	logger.info("started with startmode " + __startmode__)
 
 	# sighandler
 	sh = SigHandler_guck(mp_loggerqueue, mp_loglistener, state_data, logger)
@@ -467,20 +466,20 @@ def mainloop():
 	try:
 		webflask.REDISCLIENT.ping()
 	except Exception as e:
-		logger.error(whoami() + str(e) + ": cannot start webserver due to redis server not available, exiting")
+		logger.error(str(e) + ": cannot start webserver due to redis server not available, exiting")
 		sh.shutdown()
 		return -1
 	state_data.mpp_webflask = mp.Process(target=webflask.main, args=(cfg, dirs, state_data.WF_OUTQUEUE,
 																	 state_data.WF_INQUEUE, mp_loggerqueue,))
 	state_data.mpp_webflask.start()
 	if state_data.WF_INQUEUE.get() == "False":
-		logger.error(whoami() + ": cannot init DB, exiting")
+		logger.error(": cannot init DB, exiting")
 		sh.shutdown()
 		return -1
 
 	commlist = []
 	# Telegram
-	logger.info(whoami() + "starting telegram ...")
+	logger.info("starting telegram ...")
 	state_data.TG = TelegramThread(state_data, cfgr, mp_loggerqueue, logger)
 	state_data.TG.start()
 	commlist.append(state_data.TG)
@@ -549,7 +548,7 @@ def mainloop():
 				state_data.CAMERADATA.append(pdpar)
 				if pdmsg == "detection":
 					try:
-						logger.info(whoami() + "received detection for " + c_cname)
+						logger.info("received detection for " + c_cname)
 						datestr = datetime.datetime.now().strftime("%d%m%Y-%H:%M:%S")
 						photo_caption = datestr + ": Object detected @ " + c_cname + "!"
 						short_photo_name = c_cname + "_" + datestr + ".jpg"
@@ -564,7 +563,7 @@ def mainloop():
 							photo_name2 = addtl_photo_path + c_cname + "_" + datestr + ".jpg"
 							cv2.imwrite(photo_name2, c_frame)
 					except Exception as e:
-						logger.warning(whoami() + str(e))
+						logger.warning(str(e))
 
 		# get el from main queue (GeneralMsgHandler)
 		# because we cannot start pdedector from thread! (keras/tf bug/feature!?)
@@ -596,17 +595,17 @@ def mainloop():
 					pd_answer, pd_prm = state_data.PD_INQUEUE.get()
 					if "error" in pd_answer:
 						state_data.PD_ACTIVE = False
-						logger.error(whoami() + ": cameras/PD startup failed!")
+						logger.error(": cameras/PD startup failed!")
 						state_data.mpp_peopledetection.join()
 						for c in commlist:
 							c.send_message_all("Error - cannot start GUCK people detection!")
 					else:
-						logger.info(whoami() + "cameras/PD started!")
+						logger.info("cameras/PD started!")
 						state_data.PD_ACTIVE = True
 						for c in commlist:
 							c.send_message_all("... GUCK people detection started!")
 				except Exception as e:
-					logger.error(whoami() + str(e) + ": cannot communicate with peopledetection, trying to exit!")
+					logger.error(str(e) + ": cannot communicate with peopledetection, trying to exit!")
 					state_data.PD_ACTIVE = False
 					try:
 						os.kill(mpp_peopledetection.pid, signal.SIGKILL)
@@ -645,7 +644,7 @@ def mainloop():
 	if RESTART:
 		exitcode = 3
 	# close all the other mps & stuff
-	logger.info(whoami() + "calling shutdown sequence ...")
+	logger.info("calling shutdown sequence ...")
 	sh.shutdown(exitcode)
 	print(str(datetime.datetime.now()) + "... shutdown sequence finished!")
 

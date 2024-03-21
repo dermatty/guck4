@@ -65,7 +65,7 @@ class RedisAPI:
         return ret
 
     def copy_redis_to_cameras_cfg(self):
-        self.logger.debug(whoami() + "copying redis camera data to config ...")
+        self.logger.debug("copying redis camera data to config ...")
         cameras = self.getp(__appabbr__ + "_cameras")
         for i, c in enumerate(cameras, start=1):
             cstr = "CAMERA" + str(i)
@@ -91,13 +91,13 @@ class RedisAPI:
             with open(cfg_file, "w") as f:
                 self.cfg.write(f)
         except Exception as e:
-            self.logger.error(whoami() + str(e) + ", cannot write redis to config file!")
+            self.logger.error(str(e) + ", cannot write redis to config file!")
             return -1
-        self.logger.debug(whoami() + "... redis camera data copied to config!")
+        self.logger.debug("... redis camera data copied to config!")
         return 1
 
     def copy_cameras_to_redis(self):
-        self.logger.debug(whoami() + "copying camera data to redis ...")
+        self.logger.debug("copying camera data to redis ...")
         self.setp(__appabbr__ + "_cameras", [])
         cameralist = []
         idx = 1
@@ -133,7 +133,7 @@ class RedisAPI:
             self.copyok = False
             return
         self.setp(__appabbr__ + "_cameras", cameralist)
-        self.logger.debug(whoami() + " ... camera data copied to redis!")
+        self.logger.debug(" ... camera data copied to redis!")
 
     def get_cameras(self):
         camera_conf = []
@@ -179,7 +179,7 @@ class RedisAPI:
             self.copyok = False
             return
         self.setp(__appabbr__ + "_users", users)
-        self.logger.debug(whoami() + "user data copied to db")
+        self.logger.debug("user data copied to db")
 
     def get_photodata(self):
         return self.getp(__appabbr__ + "_photodata")
@@ -193,7 +193,7 @@ class RedisAPI:
                     del photodata[-1]
             self.setp(__appabbr__ + "_photodata", photodata)
         except Exception as e:
-            self.logger.error(whoami() + str(e) + ", cannot insert photodata!")
+            self.logger.error(str(e) + ", cannot insert photodata!")
 
     def get_users(self):
         return self.getp(__appabbr__ + "_users")
@@ -220,4 +220,4 @@ class RedisAPI:
             self.setp(__appabbr__ + "_userdata", userdata)
             self.setp(__appabbr__ + "_userdata_last_updated", time.time())
         except Exception as e:
-            self.logger.warning(whoami() + str(e))
+            self.logger.warning(str(e))

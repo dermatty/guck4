@@ -590,14 +590,14 @@ def get_free_photos(dir, camera_config, logger):
         try:
             os.mkdir(freedir)
         except Exception as e:
-            logger.warning(whoami() + str(e))
+            logger.warning(str(e))
             return []
     filelist = [f for f in os.listdir(freedir)]
     for f in filelist:
         try:
             os.remove(freedir + f)
         except Exception as e:
-            logger.warning(whoami() + str(e))
+            logger.warning(str(e))
     urllist = [(c["name"], c["photo_url"], c["user"], c["password"]) for c in camera_config]
     freephotolist = []
     for cname, url, user, pw in urllist:
@@ -613,5 +613,5 @@ def get_free_photos(dir, camera_config, logger):
             cv2.imwrite(photoname, image)
             freephotolist.append(photoname)
         except Exception as e:
-            logger.warning(whoami() + str(e))
+            logger.warning(str(e))
     return freephotolist

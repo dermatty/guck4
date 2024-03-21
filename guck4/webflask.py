@@ -171,7 +171,7 @@ def beforerequest():
                 RED.insert_update_userdata(user0, time.time(), True, userdata[user0]["no_newdetections"],
                                            userdata[user0]["photolist"])
     except Exception as e:
-        app.logger.info(whoami() + str(e))
+        app.logger.info(str(e))
         pass
 
 
@@ -187,7 +187,7 @@ def user_loader(email):
         user = User()
         user.id = email
     except Exception as e:
-        app.logger.warning(whoami() + str(e))
+        app.logger.warning(str(e))
     return user
 
 
@@ -195,7 +195,7 @@ def user_loader(email):
 @flask_login.login_required
 def userlogout():
     userid = flask_login.current_user.get_id()
-    app.logger.info(whoami() + ": user logging out - " + userid)
+    app.logger.info(": user logging out - " + userid)
     flask_login.logout_user()
     return redirect(url_for("index"))
 
@@ -203,21 +203,21 @@ def userlogout():
 @app.route("/userlogin", methods=['GET', 'POST'])
 def userlogin():
     if request.method == "GET":
-        app.logger.info(whoami() + ": new user starting to log in ...")
+        app.logger.info(": new user starting to log in ...")
         userloginform = models.UserLoginForm(request.form)
         return render_template("login.html", userloginform=userloginform, userauth=flask_login.current_user.is_authenticated)
     else:
         userloginform = models.UserLoginForm(request.form)
         email = userloginform.email.data
         pw = userloginform.password.data
-        app.logger.info(whoami() + ": user trying to log in - " + str(email) + " from ip " + str(request.remote_addr))
+        app.logger.info(": user trying to log in - " + str(email) + " from ip " + str(request.remote_addr))
         try:
             correct_pw = USERS[email]
         except Exception:
-            app.logger.warning(whoami() + ": user log in failed - " + str(email) + " from ip " + str(request.remote_addr))
+            app.logger.warning(": user log in failed - " + str(email) + " from ip " + str(request.remote_addr))
             return redirect(url_for("index"))
         if pw == correct_pw:
-            app.logger.info(whoami() + ": user logged in - " + email)
+            app.logger.info(": user logged in - " + email)
             try:
                 user = User()
                 user.id = email
@@ -225,7 +225,7 @@ def userlogin():
             except Exception:
                 pass
             return render_template("index.html")
-        app.logger.warning(whoami() + ": user log in failed - " + str(email) + " from ip " + str(request.remote_addr))
+        app.logger.warning(": user log in failed - " + str(email) + " from ip " + str(request.remote_addr))
         return redirect(url_for('index'))
 
 
@@ -396,17 +396,19 @@ def main(cfg, dirs, inqueue, outqueue, loggerqueue):
     DIRS = dirs
 
     log_handler = logging.FileHandler(dirs["logs"] + "webflask.log", mode="w")
-    log_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    wff = logging.Formatter("%(asctime)s - %(levelname)s / %(filename)s:%(lineno)s (%(funcName)s) - '%(message)s'",
+                      "%d-%m-%Y %H:%M:%S")
+    log_handler.setFormatter(wff)
     app.logger.removeHandler(default_handler)
     app.logger.setLevel(logging.DEBUG)
     app.logger.addHandler(log_handler)
 
-    app.logger.info(whoami() + "starting ...")
-    app.logger.info(whoami() + "static dir = " + static_dir)
+    app.logger.info("starting ...")
+    app.logger.info("static dir = " + static_dir)
 
     RED = RedisAPI(REDISCLIENT, dirs, cfg, app.logger)
     if not RED.copyok:
-        app.logger.error(whoami() + ": cannot init redis, exiting")
+        app.logger.error(": cannot init redis, exiting")
         outqueue.put("False")
     else:
         outqueue.put("True")
@@ -434,7 +436,7 @@ def main(cfg, dirs, inqueue, outqueue, loggerqueue):
             "threads": 3,
             "worker-connections": 100
         }
-        app.logger.info(whoami() + ": binding gunicorn to https!")
+        app.logger.info(": binding gunicorn to https!")
     except Exception:
         options = {
             'bind': '%s:%s' % ('0.0.0.0', '8000'),
@@ -448,7 +450,7 @@ def main(cfg, dirs, inqueue, outqueue, loggerqueue):
             "threads": 3,
             "worker-connections": 100
         }
-        app.logger.warning(whoami() + ": binding gunicorn to http!")
+        app.logger.warning(": binding gunicorn to http!")
     signal.signal(signal.SIGFPE, sighandler)     # nicht die feine englische / faut de mieux
     StandaloneApplication(app, options).run()
 

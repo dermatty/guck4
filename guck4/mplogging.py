@@ -31,7 +31,9 @@ def logging_listener(queue, level, filename):
     signal.signal(signal.SIGTERM, sh.sighandler_ll)
     # root = logging.getLogger()
     h = logging.FileHandler(filename, mode="w")
-    f = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    # f = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    f = logging.Formatter("%(asctime)s - %(levelname)s / %(filename)s:%(lineno)s (%(funcName)s) - '%(message)s'",
+                          "%d-%m-%Y %H:%M:%S")
     h.setFormatter(f)
     # root.addHandler(h)
     while True:
@@ -51,8 +53,8 @@ def logging_listener(queue, level, filename):
 
 
 def logtest(logger):
-    logger.debug(whoami() + "Test1")
-    logger.info(whoami() + "test2")
+    logger.debug("Test1")
+    logger.info("test2")
 
 
 def setup_logger(queue, modname):
@@ -86,7 +88,7 @@ if __name__ == '__main__':
     # setups local logger which logs to loglistener
     logger = setup_logger(mp_loggerqueue, __file__)
     logtest(logger)
-    logger.warning(whoami() + "Attention")
+    logger.warning("Attention")
 
     # stop loglistener
     stop_logging_listener(mp_loggerqueue, loglistener)

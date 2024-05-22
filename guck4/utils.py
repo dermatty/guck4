@@ -8,7 +8,7 @@ import subprocess
 import sensors
 import time
 import urllib.request
-from .mplogging import whoami
+import platform
 import base64
 import numpy as np
 import datetime
@@ -491,14 +491,18 @@ def get_status(state_data, version):
     ret += ")"
 
     # sensors / cpu temp
+    processor = platform.processor().lower()
+
     sensors.init()
     cpu_temp = []
     for chip in sensors.iter_detected_chips():
         for feature in chip:
-            if feature.label[0:4] == "Core":
+            if (("intel" in processor and feature.label[0:4] == "Core") or
+                    ("amd" in processor and feature.label[0:4] == "Tctl")):
                 temp0 = feature.get_value()
                 cpu_temp.append(temp0)
                 ret += "\nCPU " + feature.label + " temp.: " + str(round(temp0, 2)) + "°C"
+
     sensors.cleanup()
     if len(cpu_temp) > 0:
         avg_cpu_temp = sum(c for c in cpu_temp)/len(cpu_temp)

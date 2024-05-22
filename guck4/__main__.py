@@ -51,7 +51,17 @@ def GeneralMsgHandler(msg, bot, state_data):
 	elif msg == "status":
 		reply, _, _, _, _ = get_status(state_data, __version__)
 	elif msg == "?" or msg == "help":
-		reply = "start|stop|exit!!|restart!!|status|photos"
+		reply = "start|stop|exit!!|restart!!|status|photos|camrestart <n>"
+	elif msg.startswith("camrestart"):
+		try:
+			camnr = int(msg.split("camrestart")[1])
+			if camnr not in range(0, len(state_data.CAMERADATA)-1):
+				raise Exception("Camera # out of valid range!")
+			reply = "restarting camera  #" + str(camnr)
+			state_data.MAINQUEUE.put(("camrestart", camnr))
+		except Exception as e:
+			reply = str(e) + " :cannot restart!"
+
 	else:
 		reply = "Don't know what to do with '" + msg + "'!"
 	return reply
@@ -583,6 +593,9 @@ def mainloop():
 				elif pd_cmd == "restart!!":
 					mq_cmd = "restart!!"
 					mq_param = "wf"
+				elif pd_cmd == "camrestart":
+					mq_cmd = "camrestart"
+					mq_param = "wf"
 				pd_cmd = None
 			if mq_cmd == "start" and not state_data.PD_ACTIVE:
 				mpp_peopledetection = mp.Process(target=peopledetection.run_cameras,
@@ -633,6 +646,8 @@ def mainloop():
 						state_data.mpp_peopledetection.join()
 						state_data.PD_ACTIVE = False
 				TERMINATED = True
+			elif mq_cmd == "camrestart":
+				camnr = mq_param
 
 		except (queue.Empty, EOFError):
 			pass

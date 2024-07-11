@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "guck4"
-version = "4.1.7"
+version = "4.1.8"
 description = "Version 4 of the world-famous GUCK"
 authors = ["dermatty <stephan@untergrabner.at>"]
 license = "GPL v3"

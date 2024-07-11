@@ -448,6 +448,7 @@ def check_cam_health(state_data):
 
 def get_status(state_data, version):
     osversion = os.popen("cat /etc/os-release").read().split("\n")[2].split("=")[1].replace('"', '')
+    processor = platform.processor().lower()
 
     # os & version
     ret = "------- General -------"
@@ -491,8 +492,6 @@ def get_status(state_data, version):
     ret += ")"
 
     # sensors / cpu temp
-    processor = platform.processor().lower()
-
     sensors.init()
     cpu_temp = []
     for chip in sensors.iter_detected_chips():

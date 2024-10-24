@@ -15,6 +15,7 @@ import datetime
 import cv2
 import psutil
 import paramiko
+import torch
 
 
 class NetConfigReader:
@@ -478,39 +479,53 @@ def get_status(state_data, version):
         mem_crit = True
 
     # cpu
-    cpu_perc0 = psutil.cpu_percent(interval=0.25, percpu=True)
+    cpu_perc0 = [cpuload/100 for cpuload in psutil.cpu_percent(interval=0.25, percpu=True)]
     cpu_avg = sum(cpu_perc0)/float(len(cpu_perc0))
-    cpu_perc = (max(cpu_perc0) * 0.6 + cpu_avg * 0.4)/2
+    cpu_perc = (max(cpu_perc0) * 0.7 + cpu_avg * 0.3)/2
+
+    if "intel" in processor:
+        cpu_vendor = "intel"
+        cpu_crit_value = 70.0
+    elif "amd" in processor:
+        cpu_vendor = "amd"
+        cpu_crit_value = 85.0
+    else:
+        cpu_vendor = "unknown"
+        cpu_crit_value = 85.0
+
     cpu_crit = False
     if cpu_perc > 0.8:
         cpu_crit = True
-    ret += "\nRAM: " + str(perc_used) + "% ( =" + str(used_mem) + " GB) of overall " + str(overall_mem) + \
+    ret += "\nRAM: " + str(perc_used) + "% (" + str(used_mem) + " GB) of overall " + str(overall_mem) + \
            " GB used"
-    ret += "\nCPU: " + str(round(cpu_avg, 1)) + "% ("
-    for cpu0 in cpu_perc0:
-        ret += str(cpu0) + " "
-    ret += ")"
+    ret += "\nCPU info: " + platform.processor() + " / critical @ " + str(cpu_crit_value) + "°C"
+    ret += "\nCPU load: Avg=" + str(int(cpu_avg*100)) + "% / Max=" + str(int(max(cpu_perc0)*100)) + "%"
 
     # sensors / cpu temp
     sensors.init()
     cpu_temp = []
     for chip in sensors.iter_detected_chips():
         for feature in chip:
-            if (("intel" in processor and feature.label[0:4] == "Core") or
-                    ("amd" in processor and feature.label[0:4] == "Tctl")):
+            if ((cpu_vendor == "intel" and feature.label[0:4] == "Core") or
+                    ("amd" in processor and feature.label[0:4] in ["Tctl", "Tccd"])):
                 temp0 = feature.get_value()
                 cpu_temp.append(temp0)
-                ret += "\nCPU " + feature.label + " temp.: " + str(round(temp0, 2)) + "°C"
+                # ret += "\nCPU " + feature.label + " temp.: " + str(round(temp0, 2)) + "°C"
 
     sensors.cleanup()
     if len(cpu_temp) > 0:
         avg_cpu_temp = sum(c for c in cpu_temp)/len(cpu_temp)
+        max_cpu_temp = max(cpu_temp)
     else:
-        avg_cpu_temp = 0
-    if avg_cpu_temp > 52.0:
+        avg_cpu_temp = 0.0
+        max_cpu_temp = 0.0
+
+    ret += "\nCPU temp: Avg=" + str(round(avg_cpu_temp, 1)) + "°C" + " / Max=" + str(round(max_cpu_temp, 1)) + "°C"
+    if avg_cpu_temp > cpu_crit_value*0.8 and max_cpu_temp > cpu_crit_value:
         cpu_crit = True
     else:
         cpu_crit = False
+
 
     # gpu
     if osversion == "Gentoo Linux":
@@ -518,6 +533,8 @@ def get_status(state_data, version):
     else:
         smifn = "/usr/bin/nvidia-smi"
     try:
+        gpu_name = subprocess.Popen([smifn, "--query-gpu=gpu_name", "--format=csv"],
+                                   stdout=subprocess.PIPE).stdout.readlines()[1].decode()[:-1]
         gputemp = subprocess.Popen([smifn, "--query-gpu=temperature.gpu", "--format=csv"],
                                    stdout=subprocess.PIPE).stdout.readlines()[1]
         gpuutil = subprocess.Popen([smifn, "--query-gpu=utilization.gpu", "--format=csv"],
@@ -527,7 +544,7 @@ def get_status(state_data, version):
     except Exception as e:
         gputemp_str = "0.0"
         gpuutil_str = "0.0%"
-    ret += "\nGPU: " + gputemp_str + "°C" + " / " + gpuutil_str + " util."
+    ret += "\nGPU: " + gpu_name + " / " + gputemp_str + "°C" + " / " + gpuutil_str + " util."
     try:
         if float(gputemp_str) > 70.0:
             gpu_crit = True

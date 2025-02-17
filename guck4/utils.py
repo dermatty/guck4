@@ -67,6 +67,8 @@ class NetConfigReader:
 class ConfigReader:
     def __init__(self, cfg):
         self.cfg = cfg
+        self.mscoco_allowed_categories = ["person", "bicycle", "car", "motorcycle", "bus", "truck",
+                                          "bird", "cat", "dog"]
 
     def get_ssh(self):
         ssh_conf = []
@@ -86,6 +88,23 @@ class ConfigReader:
                 break
             idx += 1
         return ssh_conf
+
+    def get_ai(self):
+        ai_conf = {}
+        try:
+            assert self.cfg["AI"]["allowed_categories"]
+            ai_conf0 = json.loads(self.cfg["AI"]["allowed_categories"])
+            for cat0 in ai_conf0:
+                if cat0 in self.mscoco_allowed_categories:
+                    try:
+                        ai_conf[cat0] = float(ai_conf0[cat0])
+                    except Exception:
+                        ai_conf[cat0] = 0.9
+        except Exception:
+            ai_conf = {"person": 0.9}
+        if not ai_conf:
+            ai_conf = {"person": 0.9}
+        return ai_conf
 
     def get_cameras(self):
         camera_conf = []
@@ -249,7 +268,7 @@ def check_cfg_file(cfgfile):
             userok = False
             assert cfg[str0]["PASSWORD"]
             userok = True
-        except Exception:
+        except (Exception, ):
             break
         idx += 1
     if idx == 1 or not userok:
@@ -260,7 +279,7 @@ def check_cfg_file(cfgfile):
         str0 = "CAMERA" + str(idx)
         try:
             assert cfg[str0]
-        except Exception:
+        except (Exception, ):
             break
         try:
             cameraok = False
@@ -279,7 +298,7 @@ def check_cfg_file(cfgfile):
             assert float(cfg[str0]["HOG_THRESH"]) > 0
             assert float(cfg[str0]["MOG2_SENSITIVITY"])
             cameraok = True
-        except Exception:
+        except (Exception, ):
             break
         idx += 1
     if idx == 1 or not cameraok:
@@ -287,40 +306,40 @@ def check_cfg_file(cfgfile):
     # OPTIONS
     try:
         assert cfg["OPTIONS"]["REDIS_HOST"].strip() != ""
-    except Exception:
+    except (Exception, ):
         return "error in cfg file [OPTIONS][REDIS_HOST]!", False
     try:
         assert int(cfg["OPTIONS"]["REDIS_PORT"]) > 0
-    except Exception:
+    except (Exception, ):
         return "error in cfg file [OPTIONS][REDIS_PORT]!", False
     try:
         assert cfg["OPTIONS"]["KEYBOARD_ACTIVE"].lower() in ["yes", "no"]
-    except Exception:
+    except (Exception, ):
         return "error in cfg file [OPTIONS][KEYBOARD_ACTIVE]!", False
     try:
         assert cfg["OPTIONS"]["LOGLEVEL"].lower() in ["debug", "info", "warning", "error"]
-    except Exception:
+    except (Exception, ):
         return "error in cfg file [OPTIONS][LOGLEVEL]!", False
     try:
         assert cfg["OPTIONS"]["SHOWFRAMES"].lower() in ["yes", "no"]
-    except Exception:
+    except (Exception, ):
         return "error in cfg file [OPTIONS][SHOWFRAMES]!", False
     # no check for ["OPTIONS"]["ADDTL_PHOTO_PATH"] cause it iss optional
     # TELEGRAM
     try:
         tgram_active = True if cfg["TELEGRAM"]["ACTIVE"].lower() == "yes" else False
-    except Exception:
+    except (Exception, ):
         return "error in cfg file [TELEGRAM][ACTIVE]!", False
     if tgram_active:
         try:
             assert cfg["TELEGRAM"]["TOKEN"]
-        except Exception:
+        except (Exception, ):
             return "error in cfg file [TELEGRAM][TOKEN]!", False
         try:
             chatids = json.loads(cfg.get("TELEGRAM", "CHATIDS"))
             if not isinstance(chatids, list):
                 return "error in cfg file [TELEGRAM][CHATIDS]!", False
-        except Exception:
+        except (Exception, ):
             return "error in cfg file [TELEGRAM][CHATIDS]!", False
     return "", True
 
@@ -339,7 +358,7 @@ def get_external_ip(hostlist=[("WAN2TMO_DHCP", "raspisens"), ("WAN_DHCP", "etec"
                 s0 += ss.decode("utf-8")
             d = json.loads(s0)
             iplist.append((gateway, hostn, d["ip"], d["asn"]["name"]))
-        except Exception:
+        except (Exception, ):
             iplist.append((gateway, hostn, "N/A", "N/A"))
     return iplist
 
@@ -371,7 +390,7 @@ def get_ssh_results(state_data):
                         tempstr = str(round(float(tempstr0[2]), 1)) + "°C"
                         hum = str(round(float(tempstr0[3]), 1)) + "%"
                         cpu_temp = str(round(float(tempstr0[4]), 1)) + "°C"
-                    except Exception:
+                    except (Exception, ):
                         pass
                     res00.append("room: " + tempstr + " / hum.: " + hum + " / cpu: " + cpu_temp)
                     break
@@ -386,18 +405,18 @@ def get_ssh_results(state_data):
                             tempstr = r0.split(" ")[1]
                             sum0 += float("".join(s1 for s1 in tempstr if s1.isdigit() or s1 == "."))
                             n0 += 1
-                        except Exception:
+                        except (Exception, ):
                             pass
                 try:
                     sum0 = sum0 / n0
-                except Exception:
+                except (Exception, ):
                     sum0 = 0
                 res00.append("cpu: " + str(round(sum0, 1)) + "°C")
 
             res0list = [hostname, command0, res00]
             reslist.append(res0list)
             ssh_client.close()
-        except Exception:
+        except (Exception, ):
             pass
     return reslist
 
@@ -433,7 +452,7 @@ def check_cam_health(state_data):
             else:
                 try:
                     dt = time.time() - ctx
-                except Exception:
+                except (Exception, ):
                     dt = 31
                 if dt > 30 or not cisok:
                     c_status = "DOWN"
@@ -442,7 +461,7 @@ def check_cam_health(state_data):
                 else:
                     c_status = "RUNNING"
             cam_health[cname] = {"status": c_status, "fps": c_fps, "dt": dt}
-    except Exception:
+    except (Exception, ):
         pass
     return cam_health
 

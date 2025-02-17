@@ -1,6 +1,6 @@
 [project]
 name = "guck4"
-version = "4.2.1"
+version = "4.2.3"
 description = "Version 4 of the world-famous GUCK"
 authors = [
     {name = "dermatty",email = "stephan@untergrabner.at"}
@@ -34,13 +34,13 @@ dependencies = [
 ]
 
 [tool.poetry.dependencies]
-fridagram = { source = "etec" }
+fridagram = { source = "btec" }
 python = ">=3.11,<4.0"
 
 
 [[tool.poetry.source]]
-name = "etec"
-url = "http://etec.iv.at:8123"
+name = "btec"
+url = "http://btec.iv.at:8123"
 priority = "supplemental"
 
 [tool.poetry.scripts]

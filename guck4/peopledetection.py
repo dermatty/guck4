@@ -44,6 +44,7 @@ class TorchResNet:
         self.active = False
         self.cfgr = cfgr
         self.dirs = dirs
+        self.ai_conf = self.cfgr.get_ai()
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -106,10 +107,16 @@ class TorchResNet:
             scores0 = pred["scores"].to("cpu").tolist()
 
             # only keep a few categories
-            allowed_categories = ["person", "dog", "cat"]
-            allowed_idx = [i for i, label in enumerate(labels0) if
-                           self.weights.meta["categories"][label] in allowed_categories and scores0[i] > 0.85]
-
+            #allowed_categories = ["person", "dog", "cat"]
+            allowed_idx0 = [(i, label) for i, label in enumerate(labels0) if
+                           self.weights.meta["categories"][label] in self.ai_conf]
+            allowed_idx = [i for i, label in allowed_idx0 if scores0[i] >
+                           self.ai_conf[self.weights.meta["categories"][label]]]
+            if allowed_idx:
+                s0 = [str(scores0[i]) for i in allowed_idx]
+                self.logger.info("Camera " + camera.cname + ": detection with prob.:" + str(s0))
+            else:
+                return
             # perform nms (remove useless boxes)
             boxes1 = torch.tensor(
                 [[boxes0[i][0] + x0, boxes0[i][1] + y0, boxes0[i][2] + x0, boxes0[i][3] + y0] for i in allowed_idx])
@@ -122,12 +129,15 @@ class TorchResNet:
             labels = [self.weights.meta["categories"][label] for i, label in enumerate(labels1.tolist()) if
                       torch.tensor(i) in kept_idx]
 
-            camera.cnn_classified_list = [(box[0], box[1], box[2] - box[0], box[3] - box[1], labels[i]) for i, box in
-                                          enumerate(boxes)]
+            camera.cnn_classified_list = [(box[0], box[1], box[2] - box[0], box[3] - box[1], labels[i], scores0[i])
+                                          for i, box in enumerate(boxes)]
         except Exception as e:
             self.logger.error(str(e) + camera.cname + ": ResNet classification error!")
             camera.cnn_classified_list = []
-        return
+        alarmstr = ""
+        for _, _, _, _, label, score in camera.cnn_classified_list:
+            alarmstr += camera.cname + ": " + label + " (" + str(round(score,3) * 100) + "%)"
+        return alarmstr
 
 
 class Camera(Thread):
@@ -341,6 +351,23 @@ class Camera(Thread):
         self.cnn_classified_list = []
         self.rect = []
 
+    def draw_text(self, img, text,
+                  font=cv2.FONT_HERSHEY_PLAIN,
+                  pos=(0, 0),
+                  font_scale=3.0,
+                  font_thickness=1,
+                  text_color=(255, 255, 255),
+                  text_color_bg=(0, 0, 0)
+                  ):
+        x,y = pos
+        text_size, _ = cv2.getTextSize(text, font, font_scale, font_thickness)
+        text_w, text_h = text_size
+        cv2.rectangle(img, pos, (x + text_w, y + text_h), text_color_bg, -1)
+        cv2.putText(img, text, (x, y + text_h + font_scale - 1), font, font_scale, text_color,
+                    thickness=font_thickness)
+
+        return text_size
+
     def draw_detections(self, cnn=True):
         if cnn:
             rects = self.cnn_classified_list
@@ -349,15 +376,16 @@ class Camera(Thread):
         if self.frame is not None:
             ymax0, xmax0 = self.frame.shape[:2]
             # draw detections
-            for x, y, w, h, category_name in rects:
+            for x, y, w, h, category_name, score in rects:
                 x1 = max(0, x)
                 y1 = max(0, y)
                 x2 = min(x + w, xmax0)
                 y2 = min(y + h, ymax0)
-                outstr = category_name
+                outstr = category_name + " / " + str(round(score, 3) *100) + "%"
                 cv2.rectangle(self.frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
-                cv2.putText(self.frame, outstr, (x1 + 4, y2 - 14), cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 0, 0),
-                            thickness=1)
+                self.draw_text(self.frame, outstr, pos=(x1 + 4, y2 - 14), font_scale=1)
+                #cv2.putText(self.frame, outstr, (x1 + 4, y2 - 14), cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 0, 0),
+                #            thickness=1)
 
     def start_recording(self):
         if not self.active or not self.isok:
@@ -501,7 +529,6 @@ def run_cameras(pd_outqueue, pd_inqueue, dirs, cfg, mp_loggerqueue):
                     if c.newframe:
                         # if lag in frames do not do any cnn class.
                         if time.time() - c.tx < 2:
-                            torchresnet.get_cnn_classification(c)
                             c.draw_detections(cnn=True)
                         mainparams = (c.cname, c.frame, c.get_fps(), c.isok, c.active, c.tx)
                         if showframes:

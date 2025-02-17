@@ -8,7 +8,7 @@ try:
     __appname__ = "guck" + __version__.split(".")[0]
     __appabbr__ = "g" + __version__.split(".")[0]
     __startmode__ = "dev"
-except Exception:
+except (Exception, ):
     __startmode__ = "systemd"
     __appname__ = "guck4"
     __appabbr__ = "g4"

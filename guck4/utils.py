@@ -104,6 +104,11 @@ class ConfigReader:
             ai_conf = {"person": 0.9}
         if not ai_conf:
             ai_conf = {"person": 0.9}
+        try:
+            ai_model = self.cfg["AI"]["ai_model"]
+        except:
+            ai_model = "fasterrcnn_mobilenet_v3_large_320_fpn"
+        ai_conf["ai_model"] = ai_model
         return ai_conf
 
     def get_cameras(self):

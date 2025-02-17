@@ -69,7 +69,8 @@ class NewMatcherThread(Thread):
         self.SURL = cfg["stream_url"]
         self.NAME = cfg["name"]
         self.YMAX0 = self.XMAX0 = None
-        self.MINAREA = cfg["min_area_rect"]
+        self.minarea_factor = cfg["min_area_rect"]
+        self.MINAREA = 0
         self.CAP = None
         self.MOG2SENS = cfg["mog2_sensitivity"]
         self.HIST = 800 + (5 - self.MOG2SENS) * 199
@@ -115,6 +116,8 @@ class NewMatcherThread(Thread):
                     self.CAP = cv2.VideoCapture(self.SURL, cv2.CAP_FFMPEG)
                     ret, frame = self.CAP.read()
                     self.YMAX0, self.XMAX0 = frame.shape[:2]
+                    self.MINAREA = (self.XMAX0 * self.YMAX0) / self.minarea_factor
+                    self.logger.info("Setting MINAREA for Camera " + self.NAME + " to " + str(int(self.MINAREA)))
                 except:
                     pass
             if self.CAP.isOpened():

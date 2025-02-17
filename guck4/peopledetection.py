@@ -39,26 +39,83 @@ class SigHandler_pd:
 
 
 class TorchResNet:
+    # available pretrained models + weights from torchvision:
+    # Faster R-CNN
+    #     fasterrcnn_resnet50_fpn / FasterRCNN_ResNet50_FPN_Weights.COCO_V1
+    #     fasterrcnn_resnet50_fpn_v2 / FasterRCNN_ResNet50_FPN_V2_Weights.DEFAULT bzw. COCO_V1
+    #     fasterrcnn_mobilenet_v3_large_fpn / FasterRCNN_MobileNet_V3_Large_FPN_Weights.DEFAULT bzw. COCO_V1
+    #     fasterrcnn_mobilenet_v3_large_320_fpn / FasterRCNN_MobileNet_V3_Large_320_FPN_Weights.DEFAULT (bzw. COCO_V1)
+
     def __init__(self, dirs, cfgr, logger):
         self.logger = logger
         self.active = False
         self.cfgr = cfgr
         self.dirs = dirs
         self.ai_conf = self.cfgr.get_ai()
-
-        with warnings.catch_warnings():
+        try:
+            del self.ai_conf["ai_model"]
+        except Exception:
+            pass
+        self.ai_model =  self.cfgr.get_ai()["ai_model"]
+        self.logger.debug("ai_conf is: " + str(self.ai_conf))
+        self.logger.debug("ai_model is: " + str(self.ai_model))
+        
+        with (warnings.catch_warnings()):
             warnings.simplefilter("ignore")
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             try:
-                self.weights = torchvision.models.detection.FasterRCNN_MobileNet_V3_Large_320_FPN_Weights.DEFAULT
-                self.RESNETMODEL = torchvision.models.detection.fasterrcnn_mobilenet_v3_large_320_fpn(
-                    weights=self.weights).to(self.device)
+                # aimodel = "fasterrcnn_mobilenet_v3_large_fpn"
+                match self.ai_model:
+                    case "fasterrcnn_mobilenet_v3_large_fpn":    # ok
+                        self.weights = torchvision.models.detection.FasterRCNN_MobileNet_V3_Large_FPN_Weights.DEFAULT
+                        self.RESNETMODEL = torchvision.models.detection.fasterrcnn_mobilenet_v3_large_fpn(
+                            weights=self.weights).to(self.device)
+                    case "fasterrcnn_mobilenet_v3_large_320_fpn": # ok
+                        self.weights = torchvision.models.detection.FasterRCNN_MobileNet_V3_Large_320_FPN_Weights.DEFAULT
+                        self.RESNETMODEL = torchvision.models.detection.fasterrcnn_mobilenet_v3_large_320_fpn(
+                            weights=self.weights).to(self.device)
+                    case "fasterrcnn_resnet50_fpn":             # ok
+                        self.weights = torchvision.models.detection.FasterRCNN_ResNet50_FPN_Weights.DEFAULT
+                        self.RESNETMODEL = torchvision.models.detection.fasterrcnn_resnet50_fpn(
+                            weights=self.weights).to(self.device)
+                    case "fasterrcnn_resnet50_fpn_v2":  # ok
+                        self.weights = torchvision.models.detection.FasterRCNN_ResNet50_FPN_V2_Weights.DEFAULT
+                        self.RESNETMODEL = torchvision.models.detection.fasterrcnn_resnet50_fpn_v2(
+                            weights=self.weights).to(self.device)
+                    case "retinanet_resnet50_fpn":    # ok
+                        self.weights = torchvision.models.detection.RetinaNet_ResNet50_FPN_Weights.COCO_V1
+                        self.RESNETMODEL = torchvision.models.detection.retinanet_resnet50_fpn(
+                            weights=self.weights).to(self.device)
+                    #case "retinanet_resnet50_fpn_v2":
+                    #    self.weights = torchvision.models.detection.RetinaNet_ResNet50_FPN_V2_Weights.COCO_V1
+                    #    self.RESNETMODEL = torchvision.models.detection.retinanet_resnet50_fpn_v2(
+                    #        weights=self.weights).to(self.device)
+                    #case "fcos_resnet50_fpn":
+                    #    self.weights = torchvision.models.detection.FCOS_ResNet50_FPN_Weights.COCO_V1
+                    #    self.RESNETMODEL = torchvision.models.detection.fcos_resnet50_fpn(
+                    #        weights=self.weights).to(self.device)
+                    case "ssd300_vgg16":    # ok
+                        self.weights = torchvision.models.detection.SSD300_VGG16_Weights.DEFAULT
+                        self.RESNETMODEL = torchvision.models.detection.ssd300_vgg16(
+                            weights=self.weights).to(self.device)
+                    case "ssdlite320_mobilenet_v3_large":
+                        self.weights = torchvision.models.detection.SSDLite320_MobileNet_V3_Large_Weights.DEFAULT
+                        self.RESNETMODEL = torchvision.models.detection.ssdlite320_mobilenet_v3_large(
+                            weights=self.weights).to(self.device)
+                    case _:
+                        self.weights = torchvision.models.detection.FasterRCNN_MobileNet_V3_Large_320_FPN_Weights.DEFAULT
+                        self.RESNETMODEL = torchvision.models.detection.fasterrcnn_mobilenet_v3_large_320_fpn(
+                            weights=self.weights).to(self.device)
+
+                #self.weights = torchvision.models.detection.FasterRCNN_MobileNet_V3_Large_320_FPN_Weights.DEFAULT
+                #self.RESNETMODEL = torchvision.models.detection.fasterrcnn_mobilenet_v3_large_320_fpn(
+                #    weights=self.weights).to(self.device)
                 # self.RESNETMODEL = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True).to(self.device)
                 self.RESNETMODEL.eval()
                 self.active = True
-                self.logger.info("Torchvision Resnet initialized!")
+                self.logger.info("Torchvision initialized with " + self.ai_model + "!")
             except Exception as e:
-                self.logger.error(str(e) + ": cannot init Torchvision Resnet!")
+                self.logger.error(str(e) + ": cannot init Torchvision " + self.ai_model + "!")
                 self.RESNETMODEL = None
 
     def image_loader(self, img_cv2):
@@ -74,7 +131,8 @@ class TorchResNet:
             return []
         try:
             t0 = time.time()
-            # self.logger.debug("-------- >>> " + camera.cname + ": performing resnet classification with " + str(len(camera.rects)) + " opencv detections ...")
+            #self.logger.debug("-------- >>> " + camera.cname + ": performing resnet classification with " +
+            #                  str(len(camera.rects)) + " opencv detections ...")
 
             # get min & max value from rects
             camera.cnn_classified_list = []
@@ -105,18 +163,22 @@ class TorchResNet:
             boxes0 = pred["boxes"].to("cpu").tolist()
             labels0 = pred["labels"].to("cpu").tolist()
             scores0 = pred["scores"].to("cpu").tolist()
-
+            
             # only keep a few categories
             #allowed_categories = ["person", "dog", "cat"]
             allowed_idx0 = [(i, label) for i, label in enumerate(labels0) if
                            self.weights.meta["categories"][label] in self.ai_conf]
+
             allowed_idx = [i for i, label in allowed_idx0 if scores0[i] >
                            self.ai_conf[self.weights.meta["categories"][label]]]
+            
+            
             if allowed_idx:
                 s0 = [str(scores0[i]) for i in allowed_idx]
                 self.logger.info("Camera " + camera.cname + ": detection with prob.:" + str(s0))
             else:
                 return
+            
             # perform nms (remove useless boxes)
             boxes1 = torch.tensor(
                 [[boxes0[i][0] + x0, boxes0[i][1] + y0, boxes0[i][2] + x0, boxes0[i][3] + y0] for i in allowed_idx])
@@ -134,11 +196,6 @@ class TorchResNet:
         except Exception as e:
             self.logger.error(str(e) + camera.cname + ": ResNet classification error!")
             camera.cnn_classified_list = []
-        alarmstr = ""
-        for _, _, _, _, label, score in camera.cnn_classified_list:
-            alarmstr += camera.cname + ": " + label + " (" + str(round(score,3) * 100) + "%)"
-        return alarmstr
-
 
 class Camera(Thread):
     def __init__(self, ccfg, dirs, options, mp_loggerqueue, logger):
@@ -354,18 +411,40 @@ class Camera(Thread):
     def draw_text(self, img, text,
                   font=cv2.FONT_HERSHEY_PLAIN,
                   pos=(0, 0),
-                  font_scale=3.0,
                   font_thickness=1,
                   text_color=(255, 255, 255),
-                  text_color_bg=(0, 0, 0)
+                  text_color_bg=(0, 0, 0),
+                  frame_factor = 4.0
                   ):
-        x,y = pos
-        text_size, _ = cv2.getTextSize(text, font, font_scale, font_thickness)
+        ymax0, xmax0 = img.shape[:2]
+        x0,y0 = pos
+        target_dx = xmax0 / frame_factor
+        text_size, _ = cv2.getTextSize(text, font, 1.0, font_thickness)
+        text_w0, text_h0 = text_size
+        font_scale = max(target_dx / text_w0, 1)
+        font_thickness0 = max(int(font_thickness * font_scale), 1)
+        text_size, _ = cv2.getTextSize(text, font, font_scale, font_thickness0)
         text_w, text_h = text_size
-        cv2.rectangle(img, pos, (x + text_w, y + text_h), text_color_bg, -1)
-        cv2.putText(img, text, (x, y + text_h + font_scale - 1), font, font_scale, text_color,
-                    thickness=font_thickness)
 
+        x_rect_0 = max(x0 - 2, 0)
+        x_rect_1 = x_rect_0 + text_w
+        if x_rect_1 > xmax0:
+            x_rect_0 -= (x_rect_1 - xmax0 + 1)
+            x_rect_1 = x_rect_0 + text_w
+
+        y_rect_0 = max(y0 - 4, 0)
+        y_rect_1 = y_rect_0 + text_h + 4
+        if y_rect_1 > ymax0:
+            y_rect_0 -= (y_rect_1 - ymax0 + 1)
+            y_rect_1 = y_rect_0 + text_h + 4
+
+        cv2.rectangle(img, ( x_rect_0, y_rect_0), ( x_rect_1,  y_rect_1), text_color_bg, -1)
+
+        x_text_0 = x_rect_0 + 2
+        y_text_1 = y_rect_1 - 2
+
+        cv2.putText(img, text, (x_text_0, y_text_1), font, font_scale, text_color,
+                    thickness=font_thickness0)
         return text_size
 
     def draw_detections(self, cnn=True):
@@ -383,7 +462,10 @@ class Camera(Thread):
                 y2 = min(y + h, ymax0)
                 outstr = category_name + " / " + str(round(score, 3) *100) + "%"
                 cv2.rectangle(self.frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
-                self.draw_text(self.frame, outstr, pos=(x1 + 4, y2 - 14), font_scale=1)
+                try:
+                    self.draw_text(self.frame, outstr,  pos=(x1, y2))
+                except Exception as e:
+                    self.logger.error("###" +str(e))
                 #cv2.putText(self.frame, outstr, (x1 + 4, y2 - 14), cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 0, 0),
                 #            thickness=1)
 
@@ -529,6 +611,7 @@ def run_cameras(pd_outqueue, pd_inqueue, dirs, cfg, mp_loggerqueue):
                     if c.newframe:
                         # if lag in frames do not do any cnn class.
                         if time.time() - c.tx < 2:
+                            torchresnet.get_cnn_classification(c)
                             c.draw_detections(cnn=True)
                         mainparams = (c.cname, c.frame, c.get_fps(), c.isok, c.active, c.tx)
                         if showframes:

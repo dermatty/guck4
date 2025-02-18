@@ -27,8 +27,12 @@ def GeneralMsgHandler(msg, bot, state_data):
 	if bot0 not in ["tgram", "kbd", "wf"]:
 		return None
 	reply = ""
-	if msg == "start":
-		state_data.MAINQUEUE.put(("start", bot0))
+	if msg.startswith("start"):
+		try:
+			aiparam = msg.split("start")[1].lstrip()
+		except (Exception, ):
+			aiparam = None
+		state_data.MAINQUEUE.put(("start", aiparam))
 		reply = "starting " + __appname__ + " people detection ..."
 	elif msg == "photos":
 		if bot0 == "tgram":
@@ -586,7 +590,7 @@ def mainloop():
 			else:
 				if pd_cmd == "start":
 					mq_cmd = "start"
-					mq_param = "wf"
+					# mq_param = "wf"
 				elif pd_cmd == "stop":
 					mq_cmd = "stop"
 					mq_param = "wf"
@@ -600,7 +604,7 @@ def mainloop():
 			if mq_cmd == "start" and not state_data.PD_ACTIVE:
 				mpp_peopledetection = mp.Process(target=peopledetection.run_cameras,
 												 args=(state_data.PD_INQUEUE, state_data.PD_OUTQUEUE, state_data.DIRS,
-													   cfg, mp_loggerqueue,))
+													   mq_param, cfg, mp_loggerqueue,))
 				mpp_peopledetection.start()
 				state_data.mpp_peopledetection = mpp_peopledetection
 				state_data.PD_OUTQUEUE.put((mq_param + "_active", True))
@@ -611,12 +615,15 @@ def mainloop():
 						logger.error(": cameras/PD startup failed!")
 						state_data.mpp_peopledetection.join()
 						for c in commlist:
-							c.send_message_all("Error - cannot start GUCK people detection!")
+							c.send_message_all("Error - cannot start GUCK people detection! (" +
+											   str(pd_answer) + ")")
 					else:
 						logger.info("cameras/PD started!")
 						state_data.PD_ACTIVE = True
 						for c in commlist:
-							c.send_message_all("... GUCK people detection started!")
+							c.send_message_all("... GUCK people detection started! (" +
+											   str(pd_prm) + ")")
+							
 				except Exception as e:
 					logger.error(str(e) + ": cannot communicate with peopledetection, trying to exit!")
 					state_data.PD_ACTIVE = False

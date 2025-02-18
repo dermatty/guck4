@@ -77,9 +77,14 @@ class ConfigReader:
             str0 = "SSH" + str(idx)
             try:
                 assert self.cfg[str0]["hostname"]
+                try:
+                    port0 = int(self.cfg[str0]["port"])
+                except (Exception, ):
+                    port0 = 22
                 sshdata = {
                     "hostname": self.cfg[str0]["hostname"],
                     "username": self.cfg[str0]["username"],
+                    "port": port0,
                     "idrsa_file": self.cfg[str0]["idrsa_file"],
                     "command": self.cfg[str0]["command"]
                 }
@@ -378,15 +383,32 @@ def get_ssh_results(state_data):
             username = s["username"]
             idrsa_file = s["idrsa_file"],
             command = s["command"]
+            port = s["port"]
             command0 = command
             ssh_client = paramiko.SSHClient()
             ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh_client.connect(hostname, username=username, key_filename=idrsa_file)
+            ssh_client.connect(hostname, username=username, key_filename=idrsa_file, timeout=10, port=port)
             stdin, stdout, stderr = ssh_client.exec_command(command)
             res0 = stdout.readlines()
             res00 = []
-
-            if command.lower() == "/home/stephan/sens":
+            
+            if "webstatus" in command.lower():
+                command0 = "webstatus"
+                for r0 in res0:
+                    tempstr0 = r0.split(" / ")
+                    res00.append(tempstr0[1] + " is " + tempstr0[2].rstrip() + " (" + tempstr0[0] + ")")
+                    
+            elif "wip2" in command.lower():
+                command0 = "whatismyip2"
+                for r0 in res0:
+                    tempstr0 = r0.split(": ")
+                    interface0 = tempstr0[1].split(" via ")[0]
+                    ip0 = tempstr0[2]
+                    provider0 = " ".join(tempstr0[3].split(" ")[1:])
+                    country0 = tempstr0[4].rstrip()
+                    res00.append(interface0 + ": " + ip0 + " (" + provider0 + "/" +  country0 + ")")
+                    
+            elif command.lower() == "/home/stephan/sens":
                 command0 = "sens"
                 tempstr = "-/-"
                 hum = "-/-"
@@ -402,7 +424,7 @@ def get_ssh_results(state_data):
                     res00.append("room: " + tempstr + " / hum.: " + hum + " / cpu: " + cpu_temp)
                     break
 
-            if command.lower() == "temp":
+            elif command.lower() == "temp":
                 command0 = "temp"
                 n0 = 0
                 sum0 = 0
@@ -423,8 +445,9 @@ def get_ssh_results(state_data):
             res0list = [hostname, command0, res00]
             reslist.append(res0list)
             ssh_client.close()
-        except (Exception, ):
-            pass
+        # except (Exception, ):
+        except Exception as e:
+            print(str(e))
     return reslist
 
 """def get_sens_temp(hostn="raspisens", filen="/home/pi/sens.txt"):
@@ -483,16 +506,6 @@ def get_status(state_data, version):
     ret += "\nVersion: " + version
     ret += "\nAlarm System Active: "
     ret += "YES" if state_data.PD_ACTIVE else "NO"
-    '''ret += "\nRecording: "
-    ret += "YES" if recording else "NO"
-    ret += "\nPaused: "
-    ret += "YES" if not alarmrunning else "NO"
-    ret += "\nTelegram Mode: " + TG_MODE
-    ret += "\nAI Mode: " + AIMODE.upper()
-    ret += "\nAI Sens.: " + str(AISENS)
-    ret += "\nHCLIMIT: " + str(HCLIMIT)
-    ret += "\nNIGHTMODE: "
-    ret += "YES" if NIGHTMODE else "NO"'''
     ret += "\n------- System -------"
 
     # memory
@@ -519,9 +532,6 @@ def get_status(state_data, version):
         cpu_vendor = "unknown"
         cpu_crit_value = 85.0
 
-    cpu_crit = False
-    if cpu_perc > 0.8:
-        cpu_crit = True
     ret += "\nRAM: " + str(perc_used) + "% (" + str(used_mem) + " GB) of overall " + str(overall_mem) + \
            " GB used"
     ret += "\nCPU info: " + platform.processor() + " / critical @ " + str(cpu_crit_value) + "°C"
@@ -568,6 +578,7 @@ def get_status(state_data, version):
         gputemp_str = gputemp.decode("utf-8").rstrip()
         gpuutil_str = gpuutil.decode("utf-8").rstrip()
     except Exception as e:
+        gpu_name = "N/A"
         gputemp_str = "0.0"
         gpuutil_str = "0.0%"
     ret += "\nGPU: " + gpu_name + " / " + gputemp_str + "°C" + " / " + gpuutil_str + " util."
@@ -604,11 +615,6 @@ def get_status(state_data, version):
                         cam_crit = False
                 ret += "\n" + cname + " " + ctstatus0 + " @ %3.1f fps" % cfps + ", (%.2f" % dt + " sec. ago)"
 
-    #temp, hum = get_sens_temp()
-    #ret += "\n------- Sensors -------"
-    #ret += "\nTemperature: " + "%.1f" % temp + "C"
-    #ret += "\nHumidity: " + "%.1f" % hum + "%"
-    #ret += "\n------- SSH commands -------"
     ssh_reslist = get_ssh_results(state_data)
     for sshr in ssh_reslist:
         ssh_hostname, ssh_command, ssh_res0 = sshr

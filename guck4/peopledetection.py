@@ -53,26 +53,59 @@ class TorchResNet:
     #     fasterrcnn_mobilenet_v3_large_fpn / FasterRCNN_MobileNet_V3_Large_FPN_Weights.DEFAULT bzw. COCO_V1
     #     fasterrcnn_mobilenet_v3_large_320_fpn / FasterRCNN_MobileNet_V3_Large_320_FPN_Weights.DEFAULT (bzw. COCO_V1)
 
-    def __init__(self, cameras, dirs, cfgr, logger):
+    def __init__(self, cameras, dirs, param, cfgr, logger):
         self.logger = logger
-        self.dt_list = []
+        self.cameras = cameras
+        self.dt_dir = {}
+        for c in cameras:
+            self.dt_dir[c.cname] = []
         self.active = False
         self.cfgr = cfgr
         self.dirs = dirs
         self.camera_last_at_t = {}
         self.ai_conf = self.cfgr.get_ai()
-        try:
-            del self.ai_conf["ai_model"]
-        except Exception:
-            pass
-        self.ai_model =  self.cfgr.get_ai()["ai_model"]
-        self.logger.debug("ai_conf is: " + str(self.ai_conf))
+        if param:
+            if param == "default":
+                self.ai_model = "default"
+            elif param == "random":
+                self.ai_model = "random"
+            else:
+                try:
+                    self.ai_model_nr = int(param)
+                    if self.ai_model_nr == 0:
+                        self.ai_model = "default"
+                    elif self.ai_model_nr == 8:
+                        self.ai_model = "random"
+                    else:
+                        try:
+                            self.ai_model = AI_MODELS[self.ai_model_nr]
+                        except (Exception, ):
+                            self.ai_model = "default"
+                # model name given instead of nr ?
+                except ValueError:
+                    if param in AI_MODELS:
+                        self.ai_model = param
+                    else:
+                        self.ai_model = "default"
+
+        else:
+            try:
+                del self.ai_conf["ai_model"]
+                self.logger.debug("ai_conf is: " + str(self.ai_conf))
+            except (Exception, ):
+                pass
+            self.ai_model = self.cfgr.get_ai()["ai_model"]
+        
         if self.ai_model == "random":
             self.ai_model = AI_MODELS[random.randint(0, len(AI_MODELS) - 1)]
         self.logger.debug("ai_model is: " + str(self.ai_model))
-        
+        try:
+            self.ai_model_nr = AI_MODELS.index(self.ai_model) + 1
+        except Exception:
+            self.ai_model_nr = -1
+            
         for c in cameras:
-            self.camera_last_at_t[c.name] = 0.0
+            self.camera_last_at_t[c.cname] = 0.0
         
         with (warnings.catch_warnings()):
             warnings.simplefilter("ignore")
@@ -120,15 +153,12 @@ class TorchResNet:
                     #    self.weights = torchvision.models.detection.MaskRCNN_ResNet50_FPN_V2_Weights.DEFAULT,
                     #    self.RESNETMODEL = torchvision.models.detection.maskrcnn_resnet50_fpn_v2(
                     #        weights=self.weights).to(self.device)
-                    case _:
+                    case "default" | _:
                         self.weights = torchvision.models.detection.FasterRCNN_MobileNet_V3_Large_320_FPN_Weights.DEFAULT
                         self.RESNETMODEL = torchvision.models.detection.fasterrcnn_mobilenet_v3_large_320_fpn(
                             weights=self.weights).to(self.device)
                         self.ai_model = "fasterrcnn_mobilenet_v3_large_320_fpn"
-                try:
-                    self.ai_model_nr = AI_MODELS.index(self.ai_model) + 1
-                except Exception:
-                    self.ai_model_nr = -1
+                
                 logger.debug("AI model nr: " + str(self.ai_model_nr))
                 #self.weights = torchvision.models.detection.FasterRCNN_MobileNet_V3_Large_320_FPN_Weights.DEFAULT
                 #self.RESNETMODEL = torchvision.models.detection.fasterrcnn_mobilenet_v3_large_320_fpn(
@@ -152,7 +182,7 @@ class TorchResNet:
         if (not self.active) or not (camera.active and camera.frame is not None) or \
                 (len(camera.rects) == 0 or self.RESNETMODEL is None):
             return []
-        if time.time() - self.camera_last_at_t[camera.name] < 1.0:
+        if time.time() - self.camera_last_at_t[camera.cname] < 1.0:
             return
         try:
             camera.cnn_classified_list = []
@@ -181,8 +211,8 @@ class TorchResNet:
             img0 = self.image_loader(frame)
             t0 = time.time()
             pred = self.RESNETMODEL([img0])[0]
-            self.dt_list.append(time.time() - t0)
-            self.camera_last_at_t[camera.name] = time.time()
+            self.dt_dir[camera.cname].append(time.time() - t0)
+            self.camera_last_at_t[camera.cname] = time.time()
             boxes0 = pred["boxes"].to("cpu").tolist()
             labels0 = pred["labels"].to("cpu").tolist()
             scores0 = pred["scores"].to("cpu").tolist()
@@ -573,20 +603,28 @@ def stop_all_recordings(cameras):
         c.stop_recording()
         
 def save_to_aistatsfile(torchresnet, aistatsfile, logger):
-    dt_list = torchresnet.dt_list
     ai_model = torchresnet.ai_model
     ai_model_nr = torchresnet.ai_model_nr
-    s0 = datetime.now().strftime("%d-%m-%Y %H:%M:%S / ")
-    s0 += ai_model + "(" + str(ai_model_nr) + ") / avg. dt in ms: " + str(round(mean(dt_list) * 1000, 0))
-    s0 += " / max dt in ms: " + str(round(max(dt_list) * 1000, 0))
-    s0 += " / stdev dt in ms: " + str(round(stdev(dt_list) * 1000, 0)) + "\n"
+    s0list = ["*\n"]
+    for c in torchresnet.cameras:
+        dt_list = torchresnet.dt_dir[c.cname]
+        if dt_list:
+            try:
+                sdev = str(round(stdev(dt_list) * 1000, 0))
+            except Exception:
+                sdev = "-1.0"
+            s0 = datetime.now().strftime("%d-%m-%Y %H:%M:%S") + " / " + c.cname + " / "
+            s0 += ai_model + "(" + str(ai_model_nr) + ") / avg. dt in ms: " + str(round(mean(dt_list) * 1000, 0))
+            s0 += " / max dt in ms: " + str(round(max(dt_list) * 1000, 0))
+            s0 += " / stdev dt in ms: " + sdev + "\n"
+            s0list.append(s0)
     try:
         with open(aistatsfile, 'a') as f:
-            f.write(s0)
+            f.writelines(s0list)
     except Exception as e:
         logger.warning("save_to_aistatsfile ERROR: " + str(e))
 
-def run_cameras(pd_outqueue, pd_inqueue, dirs, cfg, mp_loggerqueue):
+def run_cameras(pd_outqueue, pd_inqueue, dirs, param, cfg, mp_loggerqueue):
     global TERMINATED
 
     setproctitle(__appabbr__ + "." + os.path.basename(__file__))
@@ -620,13 +658,18 @@ def run_cameras(pd_outqueue, pd_inqueue, dirs, cfg, mp_loggerqueue):
     elif pd_in_cmd == "kbd_active":
         kbd_active = pd_in_param
     if not camera_config or not cameras:
-        logger.error("cannot get correct config for cameras, exiting ...")
+        logger.error("Cannot get correct config for cameras, exiting ...")
         pd_outqueue.put(("error:config", None))
         sys.exit()
     else:
-        pd_outqueue.put(("allok", None))
-
-    torchresnet = TorchResNet(cameras, dirs, cfgr, logger)
+        torchresnet = TorchResNet(cameras, dirs, param, cfgr, logger)
+        if torchresnet.RESNETMODEL:
+            s0 =  torchresnet.ai_model + " [" + str(torchresnet.ai_model_nr) + "]"
+            pd_outqueue.put(("allok", s0))
+        else:
+            logger.error("Error in setting up AI model, exiting ...")
+            pd_outqueue.put(("error:ai_setup", None))
+            sys.exit()
     try:
         showframes = (options["showframes"].lower() == "yes")
     except Exception:
@@ -693,7 +736,7 @@ def run_cameras(pd_outqueue, pd_inqueue, dirs, cfg, mp_loggerqueue):
     clear_all_queues([pd_inqueue, pd_outqueue])
     
     # save to aistats file
-    logger.debug("Saving to AI detection stats to " + dirs["aistatsfile"])
+    logger.debug("Saving AI detection stats to " + dirs["aistatsfile"])
     save_to_aistatsfile(torchresnet, dirs["aistatsfile"], logger)
     
     logger.info("... exited!")

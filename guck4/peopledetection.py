@@ -1,9 +1,6 @@
-import os
-import queue
+import os, queue, random, time
 from setproctitle import setproctitle
-from .mplogging import whoami
 from guck4 import mplogging, mpcam, clear_all_queues, ConfigReader, __appabbr__
-import time
 import cv2
 import torch
 import torchvision
@@ -16,7 +13,17 @@ import sys
 from datetime import datetime
 from threading import Thread, Lock
 import warnings
+from statistics import mean, stdev
 
+AI_MODELS = [
+    "fasterrcnn_mobilenet_v3_large_fpn",
+    "fasterrcnn_mobilenet_v3_large_320_fpn",
+    "fasterrcnn_resnet50_fpn",
+    "fasterrcnn_resnet50_fpn_v2",
+    "retinanet_resnet50_fpn",
+    "ssd300_vgg16",
+    "ssdlite320_mobilenet_v3_large"
+]
 
 # todo:
 #    each camera own thread which gets data from camera and does peopledetection
@@ -46,11 +53,13 @@ class TorchResNet:
     #     fasterrcnn_mobilenet_v3_large_fpn / FasterRCNN_MobileNet_V3_Large_FPN_Weights.DEFAULT bzw. COCO_V1
     #     fasterrcnn_mobilenet_v3_large_320_fpn / FasterRCNN_MobileNet_V3_Large_320_FPN_Weights.DEFAULT (bzw. COCO_V1)
 
-    def __init__(self, dirs, cfgr, logger):
+    def __init__(self, cameras, dirs, cfgr, logger):
         self.logger = logger
+        self.dt_list = []
         self.active = False
         self.cfgr = cfgr
         self.dirs = dirs
+        self.camera_last_at_t = {}
         self.ai_conf = self.cfgr.get_ai()
         try:
             del self.ai_conf["ai_model"]
@@ -58,7 +67,12 @@ class TorchResNet:
             pass
         self.ai_model =  self.cfgr.get_ai()["ai_model"]
         self.logger.debug("ai_conf is: " + str(self.ai_conf))
+        if self.ai_model == "random":
+            self.ai_model = AI_MODELS[random.randint(0, len(AI_MODELS) - 1)]
         self.logger.debug("ai_model is: " + str(self.ai_model))
+        
+        for c in cameras:
+            self.camera_last_at_t[c.name] = 0.0
         
         with (warnings.catch_warnings()):
             warnings.simplefilter("ignore")
@@ -102,11 +116,20 @@ class TorchResNet:
                         self.weights = torchvision.models.detection.SSDLite320_MobileNet_V3_Large_Weights.DEFAULT
                         self.RESNETMODEL = torchvision.models.detection.ssdlite320_mobilenet_v3_large(
                             weights=self.weights).to(self.device)
+                    #case "maskrcnn_resnet50_fpn_v2":
+                    #    self.weights = torchvision.models.detection.MaskRCNN_ResNet50_FPN_V2_Weights.DEFAULT,
+                    #    self.RESNETMODEL = torchvision.models.detection.maskrcnn_resnet50_fpn_v2(
+                    #        weights=self.weights).to(self.device)
                     case _:
                         self.weights = torchvision.models.detection.FasterRCNN_MobileNet_V3_Large_320_FPN_Weights.DEFAULT
                         self.RESNETMODEL = torchvision.models.detection.fasterrcnn_mobilenet_v3_large_320_fpn(
                             weights=self.weights).to(self.device)
-
+                        self.ai_model = "fasterrcnn_mobilenet_v3_large_320_fpn"
+                try:
+                    self.ai_model_nr = AI_MODELS.index(self.ai_model) + 1
+                except Exception:
+                    self.ai_model_nr = -1
+                logger.debug("AI model nr: " + str(self.ai_model_nr))
                 #self.weights = torchvision.models.detection.FasterRCNN_MobileNet_V3_Large_320_FPN_Weights.DEFAULT
                 #self.RESNETMODEL = torchvision.models.detection.fasterrcnn_mobilenet_v3_large_320_fpn(
                 #    weights=self.weights).to(self.device)
@@ -129,12 +152,9 @@ class TorchResNet:
         if (not self.active) or not (camera.active and camera.frame is not None) or \
                 (len(camera.rects) == 0 or self.RESNETMODEL is None):
             return []
+        if time.time() - self.camera_last_at_t[camera.name] < 1.0:
+            return
         try:
-            t0 = time.time()
-            #self.logger.debug("-------- >>> " + camera.cname + ": performing resnet classification with " +
-            #                  str(len(camera.rects)) + " opencv detections ...")
-
-            # get min & max value from rects
             camera.cnn_classified_list = []
             YMAX0, XMAX0 = camera.frame.shape[:2]
             x0 = XMAX0
@@ -159,7 +179,10 @@ class TorchResNet:
             frame = camera.frame.copy()
             frame = frame[y0:y01, x0:x01]
             img0 = self.image_loader(frame)
+            t0 = time.time()
             pred = self.RESNETMODEL([img0])[0]
+            self.dt_list.append(time.time() - t0)
+            self.camera_last_at_t[camera.name] = time.time()
             boxes0 = pred["boxes"].to("cpu").tolist()
             labels0 = pred["labels"].to("cpu").tolist()
             scores0 = pred["scores"].to("cpu").tolist()
@@ -175,7 +198,7 @@ class TorchResNet:
             
             if allowed_idx:
                 s0 = [str(scores0[i]) for i in allowed_idx]
-                self.logger.info("Camera " + camera.cname + ": detection with prob.:" + str(s0))
+                self.logger.debug("Camera " + camera.cname + ": detection with prob.:" + str(s0))
             else:
                 return
             
@@ -447,7 +470,7 @@ class Camera(Thread):
                     thickness=font_thickness0)
         return text_size
 
-    def draw_detections(self, cnn=True):
+    def draw_detections(self, ai_model_nr, cnn=True):
         if cnn:
             rects = self.cnn_classified_list
         else:
@@ -460,7 +483,7 @@ class Camera(Thread):
                 y1 = max(0, y)
                 x2 = min(x + w, xmax0)
                 y2 = min(y + h, ymax0)
-                outstr = category_name + " / " + str(round(score, 3) *100) + "%"
+                outstr = category_name + " (" + str(ai_model_nr) + ":" + str(round(score, 3) *100) + "%)"
                 cv2.rectangle(self.frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
                 try:
                     self.draw_text(self.frame, outstr,  pos=(x1, y2))
@@ -548,7 +571,20 @@ def start_all_recordings(cameras):
 def stop_all_recordings(cameras):
     for c in cameras:
         c.stop_recording()
-
+        
+def save_to_aistatsfile(torchresnet, aistatsfile, logger):
+    dt_list = torchresnet.dt_list
+    ai_model = torchresnet.ai_model
+    ai_model_nr = torchresnet.ai_model_nr
+    s0 = datetime.now().strftime("%d-%m-%Y %H:%M:%S / ")
+    s0 += ai_model + "(" + str(ai_model_nr) + ") / avg. dt in ms: " + str(round(mean(dt_list) * 1000, 0))
+    s0 += " / max dt in ms: " + str(round(max(dt_list) * 1000, 0))
+    s0 += " / stdev dt in ms: " + str(round(stdev(dt_list) * 1000, 0)) + "\n"
+    try:
+        with open(aistatsfile, 'a') as f:
+            f.write(s0)
+    except Exception as e:
+        logger.warning("save_to_aistatsfile ERROR: " + str(e))
 
 def run_cameras(pd_outqueue, pd_inqueue, dirs, cfg, mp_loggerqueue):
     global TERMINATED
@@ -590,7 +626,7 @@ def run_cameras(pd_outqueue, pd_inqueue, dirs, cfg, mp_loggerqueue):
     else:
         pd_outqueue.put(("allok", None))
 
-    torchresnet = TorchResNet(dirs, cfgr, logger)
+    torchresnet = TorchResNet(cameras, dirs, cfgr, logger)
     try:
         showframes = (options["showframes"].lower() == "yes")
     except Exception:
@@ -612,7 +648,10 @@ def run_cameras(pd_outqueue, pd_inqueue, dirs, cfg, mp_loggerqueue):
                         # if lag in frames do not do any cnn class.
                         if time.time() - c.tx < 2:
                             torchresnet.get_cnn_classification(c)
-                            c.draw_detections(cnn=True)
+                            #if c.cnn_classified_list:
+                            #    print("#1")
+                            c.draw_detections(torchresnet.ai_model_nr)
+                            #    print("#2")
                         mainparams = (c.cname, c.frame, c.get_fps(), c.isok, c.active, c.tx)
                         if showframes:
                             cv2.imshow(c.cname, c.frame)
@@ -652,4 +691,9 @@ def run_cameras(pd_outqueue, pd_inqueue, dirs, cfg, mp_loggerqueue):
 
     shutdown_cams(cameras)
     clear_all_queues([pd_inqueue, pd_outqueue])
+    
+    # save to aistats file
+    logger.debug("Saving to AI detection stats to " + dirs["aistatsfile"])
+    save_to_aistatsfile(torchresnet, dirs["aistatsfile"], logger)
+    
     logger.info("... exited!")

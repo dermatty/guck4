@@ -186,6 +186,7 @@ def setup_dirs(version):
             configfolder = "/.guck4/"
             configfile0 = "guck4.config"
             logsdir = "/media/cifs/dokumente/g4logs/"
+        aistatsfile = logsdir + "aistats.txt"
         maindir = userhome + configfolder
 
         videodir = maindir + "video/"
@@ -198,7 +199,8 @@ def setup_dirs(version):
             "video": videodir,
             "photo": photodir,
             "logs": logsdir,
-            "configfile": configfile
+            "configfile": configfile,
+            "aistatsfile": aistatsfile
         }
     except Exception as e:
         return -1, str(e)

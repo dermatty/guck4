@@ -70,11 +70,15 @@ class TorchResNet:
             elif param == "random":
                 self.ai_model = "random"
             else:
+                # model_nr
+                # -1 ... default
+                # 0 - 6: ai models
+                # 7 ... random
                 try:
                     self.ai_model_nr = int(param)
-                    if self.ai_model_nr == 0:
+                    if self.ai_model_nr == -1:
                         self.ai_model = "default"
-                    elif self.ai_model_nr == 8:
+                    elif self.ai_model_nr == 7:
                         self.ai_model = "random"
                     else:
                         try:
@@ -100,7 +104,7 @@ class TorchResNet:
             self.ai_model = AI_MODELS[random.randint(0, len(AI_MODELS) - 1)]
         self.logger.debug("ai_model is: " + str(self.ai_model))
         try:
-            self.ai_model_nr = AI_MODELS.index(self.ai_model) + 1
+            self.ai_model_nr = AI_MODELS.index(self.ai_model)
         except Exception:
             self.ai_model_nr = -1
             
@@ -700,7 +704,7 @@ def run_cameras(pd_outqueue, pd_inqueue, dirs, param, cfg, mp_loggerqueue):
                             cv2.imshow(c.cname, c.frame)
                         c.write_record()
                         new_detections = c.get_new_detections()
-                        if new_detections and time.time() - lastdetection_tt > 3:
+                        if new_detections and time.time() - lastdetection_tt > 2:
                             lastdetection_tt = time.time()
                             mainmsg = "detection"
                         c.clear_new_detections()

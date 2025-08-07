@@ -115,6 +115,9 @@ class MainCommunicator(Thread):
                     if pcmd == "pdstart":
                         self.outqueue.put(("set_pdstart", None))
                         cmd, data = self.inqueue.get()
+                    elif pcmd == "pkill":
+                        self.outqueue.put(("set_pkill", None))
+                        cmd, data = self.inqueue.get()
                     elif pcmd == "pdrestart":
                         self.outqueue.put(("set_pdrestart", None))
                         cmd, data = self.inqueue.get()
@@ -283,6 +286,14 @@ def config():
                 content += (line + "<br>")
 
     return render_template('configedit.html', content=content, config_file=config_file, status=status)
+
+
+# -------------- pkill --------------
+@app.route("/pkill", methods=['GET', 'POST'])
+@flask_login.login_required
+def pkill():
+    RED.set_putcmd("pkill")
+    return render_template("pkill.html")
 
 
 # -------------- pd_start --------------

@@ -4,6 +4,7 @@ from setproctitle import setproctitle
 import logging, logging.handlers
 import multiprocessing as mp
 import cv2
+import subprocess
 
 import fridagram as fg
 
@@ -52,10 +53,13 @@ def GeneralMsgHandler(msg, bot, state_data):
 		else:
 			reply = "exiting " + __appname__ + "!"
 		state_data.MAINQUEUE.put((msg, None))
+	elif msg == "pkill!!":
+		reply = "Brutally performing 'pkill -9 g4/gunicorn' for " + __appname__ + " in 3 seconds!"
+		state_data.MAINQUEUE.put((msg, None))
 	elif msg == "status":
 		reply, _, _, _, _ = get_status(state_data, __version__)
 	elif msg == "?" or msg == "help":
-		reply = "start|stop|exit!!|restart!!|status|photos|camrestart <n>"
+		reply = "start|stop|exit!!|pkill!!|restart!!|status|photos|camrestart <n>"
 	elif msg.startswith("camrestart"):
 		try:
 			camnr = int(msg.split("camrestart")[1])
@@ -534,6 +538,9 @@ def mainloop():
 			elif wf_cmd == "set_pdrestart":
 				state_data.WF_OUTQUEUE.put((state_data.PD_ACTIVE, None))
 				pd_cmd = "restart!!"
+			elif wf_cmd == "set_pkill":
+				state_data.WF_OUTQUEUE.put((state_data.PD_ACTIVE, None))
+				pd_cmd = "pkill!!"
 			elif wf_cmd == "get_host_status":
 				ret, mem_crit, cpu_crit, gpu_crit, cam_crit = get_status(state_data, __version__)
 				state_data.WF_OUTQUEUE.put(("status", (ret, mem_crit, cpu_crit, gpu_crit, cam_crit)))
@@ -557,7 +564,12 @@ def mainloop():
 
 		if pdmsglist:
 			state_data.CAMERADATA = []
-			for pdmsg, pdpar in pdmsglist:
+			for pdmsgfull in pdmsglist:
+				try:
+					pdmsg, pdpar = pdmsgfull
+				except Exception as e:
+					logger.error("pdmsglist unpack error: " + str(e) + "/" + str(pdmsgfull))
+					continue
 				c_cname, c_frame, _, _, _, _ = pdpar
 				state_data.CAMERADATA.append(pdpar)
 				if pdmsg == "detection":
@@ -590,7 +602,7 @@ def mainloop():
 			else:
 				if pd_cmd == "start":
 					mq_cmd = "start"
-					# mq_param = "wf"
+					mq_param = "wf"
 				elif pd_cmd == "stop":
 					mq_cmd = "stop"
 					mq_param = "wf"
@@ -600,6 +612,9 @@ def mainloop():
 				elif pd_cmd == "camrestart":
 					mq_cmd = "camrestart"
 					mq_param = "wf"
+				elif pd_cmd == "pkill!!":
+					mq_cmd = "pkill!!"
+					mq_param = "wf"
 				pd_cmd = None
 			if mq_cmd == "start" and not state_data.PD_ACTIVE:
 				mpp_peopledetection = mp.Process(target=peopledetection.run_cameras,
@@ -607,7 +622,12 @@ def mainloop():
 													   mq_param, cfg, mp_loggerqueue,))
 				mpp_peopledetection.start()
 				state_data.mpp_peopledetection = mpp_peopledetection
-				state_data.PD_OUTQUEUE.put((mq_param + "_active", True))
+				print("--> started")
+				try:
+					state_data.PD_OUTQUEUE.put((mq_param + "_active", True))
+				except Exception as e:
+					print("----> ERR:" + str(e) + "/" + str(mq_param))
+				print("--->", mq_param)
 				try:
 					pd_answer, pd_prm = state_data.PD_INQUEUE.get()
 					if "error" in pd_answer:
@@ -653,6 +673,11 @@ def mainloop():
 						state_data.mpp_peopledetection.join()
 						state_data.PD_ACTIVE = False
 				TERMINATED = True
+			elif mq_cmd == "pkill!!":
+				time.sleep(3)
+				subprocess.call(["pkill", "-9", "gunicorn"], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+				subprocess.call(["pkill", "-9", "g4"], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+				pass
 			elif mq_cmd == "camrestart":
 				camnr = mq_param
 

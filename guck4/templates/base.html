@@ -71,18 +71,19 @@
                 <div class="navbar-header" id="header1">
                     <a class="navbar-brand" href="#">GUCK 4</a>
                 </div>
-                {% set navbar0_dd = [("home","/home","Home",".", ".", ".", ".", ".",".","."),
-                                     ("photos","/photos","Photos",".", ".", ".", ".", ".",".","."), 
-                                     ("start","/pdstart","Start",".", ".", ".", ".", ".",".","."),
-                                     ("stop","/pdstop","Stop",".", ".", ".", ".", ".",".","."),
-                                     ("config","/config","Config",".", ".", ".", ".", ".",".","."),
-                                     ("restart","/pdrestart","Restart",".", ".", ".", ".", ".",".","."),
-                                     ("status","/status","Status",".", ".", ".", ".", ".",".",".")] %} 
+                {% set navbar0_dd = [("home","/home","Home",".", ".", ".", ".", ".",".",".", "."),
+                                     ("photos","/photos","Photos",".", ".", ".", ".", ".",".",".","."),
+                                     ("start","/pdstart","Start",".", ".", ".", ".", ".",".",".","."),
+                                     ("stop","/pdstop","Stop",".", ".", ".", ".", ".",".",".","."),
+                                     ("config","/config","Config",".", ".", ".", ".", ".",".",".","."),
+                                     ("restart","/pdrestart","Restart",".", ".", ".", ".", ".",".",".","."),
+                                     ("pkill!!","/pkill","PKill",".", ".", ".", ".", ".",".",".","."),
+                                     ("status","/status","Status",".", ".", ".", ".", ".",".",".",".")] %}
                 <!-- ("guck","/guck","Guck","start", "status","photo","config","system","stop","runtime-settings"),
                 ("location","/location","Location", ".",".",".",".",".",".","."),
                 ("hue","/hue","Hue",".",".",".",".",".",".",".")] %} -->
                 <ul class="nav navbar-nav">     
-                    {% for id, href, caption, pp1, pp2, pp3, pp4, pp5, pp6, pp7 in navbar0_dd%}
+                    {% for id, href, caption, pp1, pp2, pp3, pp4, pp5, pp6, pp7, pp8 in navbar0_dd%}
                     {% if pp1 != "." %}
                     <li id="{{ id|e }}" {% if active_nav == id %} class="dropdown active" {% else %} class="dropdown" {% endif %}><a class="dropdown-toggle" data-toggle="dropdown" href=" href="{{ href|e }}"">{{ caption|e }}<span class="caret"></span></a>
                         <ul class="dropdown-menu" style="font-size: 18px;">
@@ -93,6 +94,7 @@
                             {% if pp5 != "." %} <li><a href="{{ url_for(id, menu1=pp5) }}">{{ pp5|e }}</a></li> {% endif %}
                             {% if pp6 != "." %} <li><a href="{{ url_for(id, menu1=pp6) }}">{{ pp6|e }}</a></li> {% endif %}
                             {% if pp7 != "." %} <li><a href="{{ url_for(id, menu1=pp7) }}">{{ pp7|e }}</a></li> {% endif %}
+                            {% if pp8 != "." %} <li><a href="{{ url_for(id, menu1=pp8) }}">{{ pp8|e }}</a></li> {% endif %}
                         </ul>
                     </li>
                     {% else %}

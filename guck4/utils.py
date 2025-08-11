@@ -564,23 +564,26 @@ def get_status(state_data, version):
 
 
     # gpu
-    if osversion == "Gentoo Linux":
+    smifn = None
+    gpu_name = "N/A"
+    gputemp_str = "0.0"
+    gpuutil_str = "0.0%"
+    if os.path.exists("/opt/bin/nvidia-smi"):
         smifn = "/opt/bin/nvidia-smi"
-    else:
+    elif os.path.exists("/usr/bin/nvidia-smi"):
         smifn = "/usr/bin/nvidia-smi"
-    try:
-        gpu_name = subprocess.Popen([smifn, "--query-gpu=gpu_name", "--format=csv"],
-                                   stdout=subprocess.PIPE).stdout.readlines()[1].decode()[:-1]
-        gputemp = subprocess.Popen([smifn, "--query-gpu=temperature.gpu", "--format=csv"],
-                                   stdout=subprocess.PIPE).stdout.readlines()[1]
-        gpuutil = subprocess.Popen([smifn, "--query-gpu=utilization.gpu", "--format=csv"],
-                                   stdout=subprocess.PIPE).stdout.readlines()[1]
-        gputemp_str = gputemp.decode("utf-8").rstrip()
-        gpuutil_str = gpuutil.decode("utf-8").rstrip()
-    except Exception as e:
-        gpu_name = "N/A"
-        gputemp_str = "0.0"
-        gpuutil_str = "0.0%"
+    if smifn:
+        try:
+            gpu_name = subprocess.Popen([smifn, "--query-gpu=gpu_name", "--format=csv"],
+                                       stdout=subprocess.PIPE).stdout.readlines()[1].decode()[:-1]
+            gputemp = subprocess.Popen([smifn, "--query-gpu=temperature.gpu", "--format=csv"],
+                                       stdout=subprocess.PIPE).stdout.readlines()[1]
+            gpuutil = subprocess.Popen([smifn, "--query-gpu=utilization.gpu", "--format=csv"],
+                                       stdout=subprocess.PIPE).stdout.readlines()[1]
+            gputemp_str = gputemp.decode("utf-8").rstrip()
+            gpuutil_str = gpuutil.decode("utf-8").rstrip()
+        except Exception as e:
+            pass
     ret += "\nGPU: " + gpu_name + " / " + gputemp_str + "°C" + " / " + gpuutil_str + " util."
     try:
         if float(gputemp_str) > 70.0:

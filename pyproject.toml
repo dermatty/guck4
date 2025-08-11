@@ -1,6 +1,6 @@
 [project]
 name = "guck4"
-version = "4.2.11"
+version = "4.2.12"
 description = "Version 4 of the world-famous GUCK"
 authors = [
     {name = "dermatty",email = "stephan@untergrabner.at"}

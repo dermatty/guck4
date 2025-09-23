@@ -9,7 +9,7 @@ import subprocess
 import fridagram as fg
 
 from guck4 import setup_dirs, mplogging, peopledetection, clear_all_queues, ConfigReader, check_cam_health
-from guck4 import get_status, get_free_photos, webflask, __version__, __startmode__, __appname__, __appabbr__
+from guck4 import get_status, get_speedtest_results, get_free_photos, webflask, __version__, __startmode__, __appname__, __appabbr__
 
 from .mplogging import whoami
 
@@ -58,8 +58,13 @@ def GeneralMsgHandler(msg, bot, state_data):
 		state_data.MAINQUEUE.put((msg, None))
 	elif msg == "status":
 		reply, _, _, _, _ = get_status(state_data, __version__)
+	elif msg.startswith("speedtest"):
+		shortname = msg.split("speedtest")[1].strip()
+		if not shortname:
+			shortname = "all"
+		reply = get_speedtest_results(state_data, shortname)
 	elif msg == "?" or msg == "help":
-		reply = "start|stop|exit!!|pkill!!|restart!!|status|photos|camrestart <n>"
+		reply = "start|stop|exit!!|pkill!!|restart!!|status|photos|speedtest|camrestart <n>"
 	elif msg.startswith("camrestart"):
 		try:
 			camnr = int(msg.split("camrestart")[1])
@@ -172,6 +177,7 @@ class StateData:
 		self.CAMERA_RESTART_TIME = {}
 		self.CAMERA_CONFIG = []
 		self.SSH_CONFIG = []
+		self.SPEEDTEST_CONFIG = []
 
 
 
@@ -444,8 +450,11 @@ def mainloop():
 	cfgr = ConfigReader(cfg)
 	state_data.CAMERA_CONFIG = cfgr.get_cameras()
 
-	# get ssh data & commands
+	# get ssh config
 	state_data.SSH_CONFIG = cfgr.get_ssh()
+	
+	# get speedtest config
+	state_data.SPEEDTEST_CONFIG = cfgr.get_speedtest()
 
 	# init logger
 	print(str(datetime.datetime.now()) + ": main log file is - " + dirs["logs"] + "guck.log")
@@ -541,6 +550,9 @@ def mainloop():
 			elif wf_cmd == "set_pkill":
 				state_data.WF_OUTQUEUE.put((state_data.PD_ACTIVE, None))
 				pd_cmd = "pkill!!"
+			elif wf_cmd == "get_host_speedtest":
+				ret = get_speedtest_results(state_data, "all")
+				state_data.WF_OUTQUEUE.put(("speedtest", ret))
 			elif wf_cmd == "get_host_status":
 				ret, mem_crit, cpu_crit, gpu_crit, cam_crit = get_status(state_data, __version__)
 				state_data.WF_OUTQUEUE.put(("status", (ret, mem_crit, cpu_crit, gpu_crit, cam_crit)))
@@ -598,7 +610,7 @@ def mainloop():
 			mq_param = None
 			if not pd_cmd:
 				mq_cmd, mq_param = state_data.MAINQUEUE.get_nowait()
-				print(mq_cmd)
+				print(mq_cmd, mq_param)
 			else:
 				if pd_cmd == "start":
 					mq_cmd = "start"
@@ -614,6 +626,9 @@ def mainloop():
 					mq_param = "wf"
 				elif pd_cmd == "pkill!!":
 					mq_cmd = "pkill!!"
+					mq_param = "wf"
+				elif pd_cmd == "speedtest":
+					mq_cmd = "speedtest"
 					mq_param = "wf"
 				pd_cmd = None
 			if mq_cmd == "start" and not state_data.PD_ACTIVE:
@@ -678,6 +693,9 @@ def mainloop():
 				subprocess.call(["pkill", "-9", "gunicorn"], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 				subprocess.call(["pkill", "-9", "g4"], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 				pass
+			elif mq_cmd == "speedtest":
+				pass
+			
 			elif mq_cmd == "camrestart":
 				camnr = mq_param
 

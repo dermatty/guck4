@@ -70,6 +70,32 @@ class ConfigReader:
         self.mscoco_allowed_categories = ["person", "bicycle", "car", "motorcycle", "bus", "truck",
                                           "bird", "cat", "dog"]
 
+    def get_speedtest(self):
+        st_conf = []
+        idx = 1
+        while True:
+            str0 = "SPEEDTEST" + str(idx)
+            try:
+                assert self.cfg[str0]["hostname"]
+                try:
+                    port0 = int(self.cfg[str0]["port"])
+                except (Exception,):
+                    port0 = 22
+                stdata = {
+                    "hostname": self.cfg[str0]["hostname"],
+                    "shortname": self.cfg[str0]["shortname"],
+                    "username": self.cfg[str0]["username"],
+                    "port": port0,
+                    "idrsa_file": self.cfg[str0]["idrsa_file"],
+                    "command": self.cfg[str0]["command"]
+                }
+                st_conf.append(stdata)
+            except (Exception, ):
+                break
+            idx += 1
+        return st_conf
+
+
     def get_ssh(self):
         ssh_conf = []
         idx = 1
@@ -374,6 +400,47 @@ def get_external_ip(hostlist=[("WAN2TMO_DHCP", "raspisens"), ("WAN_DHCP", "etec"
             iplist.append((gateway, hostn, "N/A", "N/A"))
     return iplist
 
+def get_speedtest_results(state_data, shortname):
+    ret = ""
+    if shortname.lower() == "all":
+        shortnamelist = [s["shortname"] for s in state_data.SPEEDTEST_CONFIG]
+    else:
+        shortnamelist = [shortname]
+    # print("---->" , shortnamelist)
+    for sn0 in shortnamelist:
+        for s in state_data.SPEEDTEST_CONFIG:
+            if not sn0 == s["shortname"]:
+                continue
+            try:
+                hostname = s["hostname"]
+                username = s["username"]
+                idrsa_file = s["idrsa_file"],
+                command = s["command"]
+                port = s["port"]
+                # print("---->", hostname, command)
+                ssh_client = paramiko.SSHClient()
+                ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                ssh_client.connect(hostname, username=username, key_filename=idrsa_file, timeout=30, port=port)
+                stdin, stdout, stderr = ssh_client.exec_command(command)
+                res0 = stdout.readlines()
+                # print("---->", res0)
+                for r0 in res0:
+                    tempstr0 = r0.split(": ")
+                    if tempstr0[0].strip() == "ISP":
+                        ret += "------- ISP " + tempstr0[1].strip() + " (" + sn0 + ")" + " -------\n"
+                    elif tempstr0[0].strip() == "Download":
+                        tempstr1 = tempstr0[1].split(" (data")[0].strip() + "\n"
+                        ret += "   Download: " + tempstr1
+                    elif tempstr0[0].strip() == "Upload":
+                        tempstr1 = tempstr0[1].split(" (data")[0].strip() + "\n"
+                        ret += "   Upload: " + tempstr1 + "\n"
+                    elif tempstr0[0].strip() == "Idle Latency":
+                        tempstr1 = tempstr0[1].split(" (jitter")[0].strip()
+                        ret += "   Ping: " + tempstr1 + "\n"
+            except Exception as e:
+                print(str(e))
+    # print("---->", ret)
+    return ret
 
 def get_ssh_results(state_data):
     reslist = []
@@ -496,6 +563,7 @@ def check_cam_health(state_data):
     return cam_health
 
 
+
 def get_status(state_data, version):
     osversion = os.popen("cat /etc/os-release").read().split("\n")[2].split("=")[1].replace('"', '')
     processor = platform.processor().lower()
@@ -561,7 +629,6 @@ def get_status(state_data, version):
         cpu_crit = True
     else:
         cpu_crit = False
-
 
     # gpu
     smifn = None

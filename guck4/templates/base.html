@@ -78,6 +78,7 @@
                                      ("config","/config","Config",".", ".", ".", ".", ".",".",".","."),
                                      ("restart","/pdrestart","Restart",".", ".", ".", ".", ".",".",".","."),
                                      ("pkill!!","/pkill","PKill",".", ".", ".", ".", ".",".",".","."),
+                                     ("speedtest","/speedtest","Speedtest",".", ".", ".", ".", ".",".",".","."),
                                      ("status","/status","Status",".", ".", ".", ".", ".",".",".",".")] %}
                 <!-- ("guck","/guck","Guck","start", "status","photo","config","system","stop","runtime-settings"),
                 ("location","/location","Location", ".",".",".",".",".",".","."),
@@ -95,6 +96,7 @@
                             {% if pp6 != "." %} <li><a href="{{ url_for(id, menu1=pp6) }}">{{ pp6|e }}</a></li> {% endif %}
                             {% if pp7 != "." %} <li><a href="{{ url_for(id, menu1=pp7) }}">{{ pp7|e }}</a></li> {% endif %}
                             {% if pp8 != "." %} <li><a href="{{ url_for(id, menu1=pp8) }}">{{ pp8|e }}</a></li> {% endif %}
+                            {% if pp9 != "." %} <li><a href="{{ url_for(id, menu1=pp9) }}">{{ pp9|e }}</a></li> {% endif %}
                         </ul>
                     </li>
                     {% else %}

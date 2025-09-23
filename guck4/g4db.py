@@ -22,6 +22,8 @@ class RedisAPI:
             self.setp(__appabbr__ + "_new_detections", 0)
         if not self.getp(__appabbr__ + "_hoststatus"):
             self.setp(__appabbr__ + "_hoststatus", None)
+        if not self.getp(__appabbr__ + "_hostspeedtest"):
+            self.setp(__appabbr__ + "_speedtest", None)
         if not self.getp(__appabbr__ + "_free_photodata"):
             self.setp(__appabbr__ + "_free_photodata", [])
         if not self.getp(__appabbr__ + "_free_photodata_status"):
@@ -46,9 +48,15 @@ class RedisAPI:
 
     def set_host_status(self, status):
         self.setp(__appabbr__ + "_hoststatus", status)
+        
+    def set_host_speedtest(self, speedtest):
+        self.setp(__appabbr__ + "_hostspeedtest", speedtest)
 
     def get_host_status(self):
         return self.getp(__appabbr__ + "_hoststatus")
+
+    def get_host_speedtest(self):
+        return self.getp(__appabbr__ + "_hostspeedtest")
 
     def set_free_photodata(self, data):
         self.setp(__appabbr__ + "_free_photodata", data)

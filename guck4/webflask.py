@@ -128,6 +128,11 @@ class MainCommunicator(Thread):
                         self.outqueue.put(("get_host_status", None))
                         cmd, data = self.inqueue.get()
                         self.red.set_host_status(data)
+                    elif pcmd == "get_host_speedtest":
+                        self.outqueue.put(("get_host_speedtest", None))
+                        cmd, data = self.inqueue.get()
+                        self.red.set_host_speedtest(data)
+                        
                     elif pcmd == "get_free_photodata":
                         self.outqueue.put(("get_free_photodata", None))
                         cmd, data = self.inqueue.get()
@@ -325,6 +330,20 @@ def status():
     statuslist, mem_crit, cpu_crit, gpu_crit, cam_crit = host_status
     statuslist = statuslist.split("\n")
     return render_template("status.html", statuslist=statuslist)
+
+# -------------- status --------------
+@app.route("/speedtest", methods=['GET', 'POST'])
+@flask_login.login_required
+def speedtest():
+    RED.set_host_speedtest(None)
+    RED.set_putcmd("get_host_speedtest")
+    host_speedtest = None
+    while not host_speedtest:
+        host_speedtest = RED.get_host_speedtest()
+        if not host_speedtest:
+            time.sleep(0.05)
+    host_speedtest = host_speedtest.split("\n")
+    return render_template("speedtest.html", speedtest=host_speedtest)
 
 # -------------- restart --------------
 @app.route("/pdrestart", methods=['GET', 'POST'])

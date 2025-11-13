@@ -219,6 +219,7 @@ def setup_dirs(version):
             logsdir = "/media/cifs/dokumente/g4logs/"
         aistatsfile = logsdir + "aistats.txt"
         maindir = userhome + configfolder
+        gunicornfile = maindir + "gunicorn.config"
 
         videodir = maindir + "video/"
         photodir = maindir + "photo/"
@@ -231,7 +232,8 @@ def setup_dirs(version):
             "photo": photodir,
             "logs": logsdir,
             "configfile": configfile,
-            "aistatsfile": aistatsfile
+            "aistatsfile": aistatsfile,
+            "gunicornfile": gunicornfile
         }
     except Exception as e:
         return -1, str(e)

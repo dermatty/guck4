@@ -450,37 +450,21 @@ def main(cfg, dirs, inqueue, outqueue, loggerqueue):
     maincomm.start()
 
     try:
-        certfile = cfg["OPTIONS"]["CERTFILE"]
-        keyfile = cfg["OPTIONS"]["KEYFILE"]
+        with open(dirs["gunicornfile"], "r") as g:
+            options = eval(g.read())
+        app.logger.info(": setting gunicorn config to " + str(options))
+    except Exception as e:
+        app.logger.warning(": " + str(e) + " - setting gunicorn config to defaults!")
         options = {
             'bind': '%s:%s' % ('0.0.0.0', '8000'),
-            'certfile': certfile,
-            'keyfile': keyfile,
+            'log-file': '/media/cifs/dokumente/g4logs/gunicorn.log',
             'capture_output': True,
             'debug': True,
             'graceful_timeout': 10,
             "timeout": 120,
-            # 'worker_class': 'gevent',
-            'worker_class': 'gthread',
-            'workers': 3,
-            "threads": 3,
-            "worker-connections": 100
+            'worker_class': 'sync',
+            'workers': 8
         }
-        app.logger.info(": binding gunicorn to https!")
-    except Exception:
-        options = {
-            'bind': '%s:%s' % ('0.0.0.0', '8000'),
-            'capture_output': True,
-            'debug': True,
-            'graceful_timeout': 10,
-            "timeout": 120,
-            #'worker_class': 'gevent',
-            'worker_class': 'gthread',
-            'workers': 3,
-            "threads": 3,
-            "worker-connections": 100
-        }
-        app.logger.warning(": binding gunicorn to http!")
     signal.signal(signal.SIGFPE, sighandler)     # nicht die feine englische / faut de mieux
     StandaloneApplication(app, options).run()
 

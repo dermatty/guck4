@@ -8,11 +8,12 @@ import subprocess
 
 import fridagram as fg
 
-from guck4 import setup_dirs, mplogging, peopledetection, clear_all_queues, ConfigReader, check_cam_health
-from guck4 import get_status, get_speedtest_results, get_free_photos, webflask, __version__, __startmode__, __appname__, __appabbr__
-
-from .mplogging import whoami
-
+from guck4.utils import ConfigReader, clear_all_queues
+from guck4.utils import setup_dirs, get_status, get_speedtest_results, get_free_photos, __version__, __startmode__, __appname__, __appabbr__
+from guck4.mplogging import whoami
+import guck4.peopledetection as peopledetection
+import guck4.mplogging as mplogging
+import guck4.webflask as webflask
 
 TERMINATED = False
 RESTART = False

@@ -1,7 +1,7 @@
-from .mplogging import whoami
+from guck4.mplogging import whoami
 import pickle
 import time
-from guck4 import __appname__, __appabbr__
+from guck4.utils import __appname__, __appabbr__
 
 
 # --------------- REDIS API -------------------

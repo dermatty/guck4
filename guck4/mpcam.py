@@ -1,6 +1,7 @@
 import cv2
 from setproctitle import setproctitle
-from guck4 import mplogging, __appabbr__
+import guck4.mplogging as mplogging
+from guck4.utils import __appabbr__
 import os
 import time
 import signal

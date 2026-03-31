@@ -8,10 +8,11 @@ from flask_sse import sse
 from flask_session import Session
 import flask_login
 from setproctitle import setproctitle
-from .mplogging import whoami
-from .g4db import RedisAPI
+from guck4.mplogging import whoami
+from guck4.g4db import RedisAPI
 import time
-from guck4 import models, setup_dirs, check_cfg_file, __version__, __appname__, __appabbr__, __startmode__
+import guck4.models
+from guck4.utils import setup_dirs, check_cfg_file, __version__, __appname__, __appabbr__, __startmode__
 from threading import Thread, Lock
 import logging
 import redis

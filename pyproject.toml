@@ -1,11 +1,11 @@
 [project]
 name = "guck4"
-version = "4.3.1"
+version = "4.3.2"
 description = "Version 4 of the world-famous GUCK"
 authors = [
     {name = "dermatty",email = "stephan@untergrabner.at"}
 ]
-license = "GPL v3"
+license = "GPL-3.0-or-later"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
@@ -33,19 +33,21 @@ dependencies = [
     "pytoml>=0.1.21"
 ]
 
-[tool.poetry.dependencies]
-fridagram = { source = "btec" }
-python = ">=3.13,<4.0"
-
-
-[[tool.poetry.source]]
+[[tool.uv.index]]
 name = "btec"
 url = "http://btec.iv.at:8123"
-priority = "supplemental"
+default = true
 
-[tool.poetry.scripts]
-guck4 = "guck4.guck4:run"
+[tool.uv.sources]
+fridagram = { index = "btec" }
+
+[project.scripts]
+guck4 = "guck4.guck4:start"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+
+
+

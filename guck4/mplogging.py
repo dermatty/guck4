@@ -7,7 +7,7 @@ import inspect
 from setproctitle import setproctitle
 import os
 import signal
-from guck4 import __appabbr__
+from .utils import __appabbr__
 
 
 class SigHandler_ll:

@@ -1,6 +1,7 @@
 import os, queue, random, time
 from setproctitle import setproctitle
-from guck4 import mplogging, mpcam, clear_all_queues, ConfigReader, __appabbr__
+import guck4.mplogging as mplogging, guck4.mpcam as mpcam
+from guck4.utils import clear_all_queues, ConfigReader, __appabbr__
 import cv2
 import torch
 import torchvision

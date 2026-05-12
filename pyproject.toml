@@ -1,6 +1,6 @@
 [project]
 name = "guck4"
-version = "4.3.2"
+version = "4.3.3"
 description = "Version 4 of the world-famous GUCK"
 authors = [
     {name = "dermatty",email = "stephan@untergrabner.at"}
@@ -31,15 +31,13 @@ dependencies = [
     "pip>=25.0",
     "numpy>=2.0.0",
     "pytoml>=0.1.21",
-    "metadata",
 ]
 
 [[tool.uv.index]]
 name = "btec"
 url = "http://btec.iv.at:8123"  
 publish-url = "http://btec.iv.at:8123"
-explicit = true
-default = true
+#default = true
 
 [tool.uv.sources]
 fridagram = { index = "btec" }

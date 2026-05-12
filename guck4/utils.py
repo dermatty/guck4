@@ -1,5 +1,5 @@
 import configparser
-import metadata
+from importlib import metadata
 from os.path import expanduser
 import os, sys
 import shutil
@@ -590,7 +590,7 @@ def get_status(state_data, version):
     
     # os & version
     ret = "------- General -------"
-    ret += "Guck " + version + " on " + osversion + "(" + kernelversion + ") and Python " + pythonversion 
+    ret += "\nGuck " + version + " on " + osversion + "(" + kernelversion + ") and Python " + pythonversion 
     ret += "\nAlarm System Active: "
     ret += "YES" if state_data.PD_ACTIVE else "NO"
     ret += "\n------- System -------"

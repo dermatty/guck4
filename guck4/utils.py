@@ -1,6 +1,7 @@
 import configparser
+import metadata
 from os.path import expanduser
-import os
+import os, sys
 import shutil
 import queue
 import json
@@ -16,7 +17,7 @@ import cv2
 import psutil
 import paramiko
 import torch
-import psutil, toml, os
+import psutil, toml
 from importlib.metadata import version
 
 try:
@@ -583,11 +584,13 @@ def check_cam_health(state_data):
 def get_status(state_data, version):
     osversion = os.popen("cat /etc/os-release").read().split("\n")[2].split("=")[1].replace('"', '')
     processor = platform.processor().lower()
-
+    version = metadata.version("guck4")
+    pythonversion = sys.version.split(" ")[0]
+    kernelversion = os.uname().release.split("-")[0]
+    
     # os & version
     ret = "------- General -------"
-    ret += "\nOS: " + osversion
-    ret += "\nVersion: " + version
+    ret += "Guck " + version + " on " + osversion + "(" + kernelversion + ") and Python " + pythonversion 
     ret += "\nAlarm System Active: "
     ret += "YES" if state_data.PD_ACTIVE else "NO"
     ret += "\n------- System -------"

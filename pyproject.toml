@@ -1,13 +1,13 @@
 [project]
 name = "guck4"
-version = "4.3.2"
+version = "4.3.3"
 description = "Version 4 of the world-famous GUCK"
 authors = [
     {name = "dermatty",email = "stephan@untergrabner.at"}
 ]
 license = "GPL-3.0-or-later"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = [
     "fridagram>=0.1.13",
     "torch>=2.6.0",
@@ -36,7 +36,10 @@ dependencies = [
 [[tool.uv.index]]
 name = "btec"
 url = "http://btec.iv.at:8123"
+publish-url = "http://btec.iv.at:8123"
 default = true
+explicit = true
+  
 
 [tool.uv.sources]
 fridagram = { index = "btec" }
@@ -45,9 +48,18 @@ fridagram = { index = "btec" }
 guck4 = "guck4.guck4:start"
 
 [build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+requires = ["uv_build>=0.11.2,<0.12"]
+build-backend = "uv_build"
 
+[dependency-groups]
+dev = [
+    "basedpyright>=1.39.3",
+    "black>=26.3.1",
+    "flake8>=7.3.0",
+    "pytest>=9.0.3",
+    "python-lsp-ruff>=2.3.1",
+    "python-lsp-server>=1.14.0",
+]
 
 
 

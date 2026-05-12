@@ -1,6 +1,6 @@
 [project]
 name = "guck4"
-version = "4.3.3"
+version = "4.3.2"
 description = "Version 4 of the world-famous GUCK"
 authors = [
     {name = "dermatty",email = "stephan@untergrabner.at"}
@@ -16,7 +16,7 @@ dependencies = [
     "setproctitle>=1.3.3",
     "pysensors>=0.0.4",
     "shapely>=2.0.7",
-    "flask>=3.0.0",
+    "flask>=3.1.0",
     "gunicorn>=23.0.0",
     "redis>=5.0.1",
     "html2text>=2024.2",
@@ -35,11 +35,8 @@ dependencies = [
 
 [[tool.uv.index]]
 name = "btec"
-url = "http://btec.iv.at:8123"
-publish-url = "http://btec.iv.at:8123"
+url = "http://btec.iv.at:8123"  
 default = true
-explicit = true
-  
 
 [tool.uv.sources]
 fridagram = { index = "btec" }
@@ -51,15 +48,6 @@ guck4 = "guck4.guck4:start"
 requires = ["uv_build>=0.11.2,<0.12"]
 build-backend = "uv_build"
 
-[dependency-groups]
-dev = [
-    "basedpyright>=1.39.3",
-    "black>=26.3.1",
-    "flake8>=7.3.0",
-    "pytest>=9.0.3",
-    "python-lsp-ruff>=2.3.1",
-    "python-lsp-server>=1.14.0",
-]
-
-
-
+[tool.uv.build-backend]
+module-name = "guck4"
+module-root = ""

@@ -11,7 +11,7 @@ from setproctitle import setproctitle
 from guck4.mplogging import whoami
 from guck4.g4db import RedisAPI
 import time
-import guck4.models
+import guck4.models as models
 from guck4.utils import setup_dirs, check_cfg_file, __version__, __appname__, __appabbr__, __startmode__
 from threading import Thread, Lock
 import logging

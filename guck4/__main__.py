@@ -24,7 +24,7 @@ _CLEAR_BOT_FREQ = 6  # clear bot freq in hours
 def GeneralMsgHandler(msg, bot, state_data):
 	global TERMINATED
 	global RESTART
-	# bot = tgram / kbd
+	# bot = tgram / kbdg
 	bot0 = bot.lower()
 	if bot0 not in ["tgram", "kbd", "wf"]:
 		return None

@@ -462,11 +462,11 @@ def get_speedtest_results(state_data, shortname):
 def get_ssh_results(state_data):
     reslist = []
     for s in state_data.SSH_CONFIG:
+        hostname = s["hostname"]
+        username = s["username"]
+        command = s["command"]
         try:
-            hostname = s["hostname"]
-            username = s["username"]
-            idrsa_file = s["idrsa_file"],
-            command = s["command"]
+            idrsa_file = s["idrsa_file"]
             port = s["port"]
             command0 = command
             ssh_client = paramiko.SSHClient()
@@ -531,7 +531,7 @@ def get_ssh_results(state_data):
             ssh_client.close()
         # except (Exception, ):
         except Exception as e:
-            print(str(e))
+            print(str(e) + ": " + hostname + ", command=" + command)
     return reslist
 
 """def get_sens_temp(hostn="raspisens", filen="/home/pi/sens.txt"):

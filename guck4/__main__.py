@@ -638,12 +638,11 @@ def mainloop():
 													   mq_param, cfg, mp_loggerqueue,))
 				mpp_peopledetection.start()
 				state_data.mpp_peopledetection = mpp_peopledetection
-				print("--> started")
+
 				try:
 					state_data.PD_OUTQUEUE.put((mq_param + "_active", True))
 				except Exception as e:
-					print("----> ERR:" + str(e) + "/" + str(mq_param))
-				print("--->", mq_param)
+					logger.error("Error:" + str(e) + "/" + str(mq_param))
 				try:
 					pd_answer, pd_prm = state_data.PD_INQUEUE.get()
 					if "error" in pd_answer:

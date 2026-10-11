@@ -108,19 +108,24 @@ class NewMatcherThread(Thread):
             self.setFGBG_MOG2()
 
     def OpenVideoCapture(self):
+        os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;udp"
         ret = False
         self.startup = True
         self.CAP = None
         for i in range(10):
             if not self.CAP:
+                self.logger.info("opening videocapture for " + self.NAME)
                 try:
+                    # os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;udp"
                     self.CAP = cv2.VideoCapture(self.SURL, cv2.CAP_FFMPEG)
+                    # cv2.cudacodec.VideoReader()
+                    self.logger.info("... " + self.NAME + " videocapture opened!")
                     ret, frame = self.CAP.read()
                     self.YMAX0, self.XMAX0 = frame.shape[:2]
                     self.MINAREA = (self.XMAX0 * self.YMAX0) / self.minarea_factor
                     self.logger.info("Setting MINAREA for Camera " + self.NAME + " to " + str(int(self.MINAREA)))
-                except:
-                    pass
+                except Exception as e:
+                    self.logger.error("Error opening video capture: " + str(e))
             if self.CAP.isOpened():
                 ret = True
                 break
@@ -263,7 +268,7 @@ def run_cam(cfg, options, child_pipe, mp_loggerqueue):
     setproctitle(__appabbr__ + "." + cfg["name"] + "_" + os.path.basename(__file__))
 
     logger = mplogging.setup_logger(mp_loggerqueue, __file__)
-    logger.info("starting ...")
+    logger.info("starting camera " + CNAME + " ...")
 
     sh = SigHandler_mpcam(logger)
     signal.signal(signal.SIGINT, sh.sighandler_mpcam)

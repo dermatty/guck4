@@ -12,7 +12,14 @@ from guck4.mplogging import whoami
 from guck4.g4db import RedisAPI
 import time
 import guck4.models as models
-from guck4.utils import setup_dirs, check_cfg_file, __version__, __appname__, __appabbr__, __startmode__
+from guck4.utils import (
+    setup_dirs,
+    check_cfg_file,
+    __version__,
+    __appname__,
+    __appabbr__,
+    __startmode__,
+)
 from threading import Thread, Lock
 import logging
 import redis
@@ -21,7 +28,7 @@ import signal
 import shutil, sys
 import html2text
 
-
+TEST = 1
 RED = None
 USERS = None
 DIRS = None
@@ -30,7 +37,7 @@ maincomm = None
 # get redis data
 ret, dirs = setup_dirs(__version__)
 cfg_file = dirs["configfile"]
-static_dir = '/'.join(__file__.split("/")[:-1]) + "/static/"
+static_dir = "/".join(__file__.split("/")[:-1]) + "/static/"
 
 
 cfg = configparser.ConfigParser()
@@ -50,6 +57,7 @@ REDISCLIENT = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, db=0)
 
 # -------------- Helper functions --------------
 
+
 def number_of_workers():
     return (multiprocessing.cpu_count() * 2) + 1
 
@@ -68,9 +76,9 @@ def sighandler(a, b):
 app = Flask(__name__)
 app.secret_key = "dfdsmdsv11nmDFSDfds_ers"
 app.config["REDIS_URL"] = "redis://" + REDIS_HOST + ":" + str(REDIS_PORT)
-app.config['SESSION_TYPE'] = "redis"
+app.config["SESSION_TYPE"] = "redis"
 app.config["SESSION_REDIS"] = REDISCLIENT
-app.register_blueprint(sse, url_prefix='/stream')
+app.register_blueprint(sse, url_prefix="/stream")
 Session(app)
 
 
@@ -91,14 +99,18 @@ class MainCommunicator(Thread):
     def sse_publish(self):
         if self.pd_active:
             with self.app.app_context():
-                result0 = render_template("guckphoto.html", nralarms=self.no_detections, guckstatus="on")
+                result0 = render_template(
+                    "guckphoto.html", nralarms=self.no_detections, guckstatus="on"
+                )
                 type0 = "nrdet0"
                 sse.publish({"message": result0}, type=type0)
                 type0 = "title0"
                 sse.publish({"message": str(self.no_detections)}, type=type0)
         else:
             with self.app.app_context():
-                result0 = render_template("guckphoto.html", nralarms=self.no_detections, guckstatus="off")
+                result0 = render_template(
+                    "guckphoto.html", nralarms=self.no_detections, guckstatus="off"
+                )
                 type0 = "nrdet0"
                 sse.publish({"message": result0}, type=type0)
                 type0 = "title0"
@@ -133,7 +145,7 @@ class MainCommunicator(Thread):
                         self.outqueue.put(("get_host_speedtest", None))
                         cmd, data = self.inqueue.get()
                         self.red.set_host_speedtest(data)
-                        
+
                     elif pcmd == "get_free_photodata":
                         self.outqueue.put(("get_free_photodata", None))
                         cmd, data = self.inqueue.get()
@@ -149,7 +161,7 @@ class MainCommunicator(Thread):
                 pass
             try:
                 lastuserdata_tt = self.red.get_userdata_last_updated()
-                userdata_updated_since = (lastuserdata_tt > self.last_sse_published)
+                userdata_updated_since = lastuserdata_tt > self.last_sse_published
             except Exception:
                 userdata_updated_since = False
             if cmd != self.pd_active or userdata_updated_since or new_detections > 0:
@@ -163,7 +175,7 @@ class MainCommunicator(Thread):
 # -------------- Login Manager --------------
 
 login_manager = flask_login.LoginManager()
-login_manager.login_view = 'userlogin'
+login_manager.login_view = "userlogin"
 login_manager.init_app(app)
 
 
@@ -177,8 +189,13 @@ def beforerequest():
             if not userdata or not user_in_userdata:
                 RED.insert_update_userdata(user0, time.time(), True, 0, [])
             else:
-                RED.insert_update_userdata(user0, time.time(), True, userdata[user0]["no_newdetections"],
-                                           userdata[user0]["photolist"])
+                RED.insert_update_userdata(
+                    user0,
+                    time.time(),
+                    True,
+                    userdata[user0]["no_newdetections"],
+                    userdata[user0]["photolist"],
+                )
     except Exception as e:
         app.logger.info(str(e))
         pass
@@ -200,7 +217,7 @@ def user_loader(email):
     return user
 
 
-@app.route("/userlogout", methods=['GET', 'POST'])
+@app.route("/userlogout", methods=["GET", "POST"])
 @flask_login.login_required
 def userlogout():
     userid = flask_login.current_user.get_id()
@@ -209,21 +226,35 @@ def userlogout():
     return redirect(url_for("index"))
 
 
-@app.route("/userlogin", methods=['GET', 'POST'])
+@app.route("/userlogin", methods=["GET", "POST"])
 def userlogin():
     if request.method == "GET":
         app.logger.info(": new user starting to log in ...")
         userloginform = models.UserLoginForm(request.form)
-        return render_template("login.html", userloginform=userloginform, userauth=flask_login.current_user.is_authenticated)
+        return render_template(
+            "login.html",
+            userloginform=userloginform,
+            userauth=flask_login.current_user.is_authenticated,
+        )
     else:
         userloginform = models.UserLoginForm(request.form)
         email = userloginform.email.data
         pw = userloginform.password.data
-        app.logger.info(": user trying to log in - " + str(email) + " from ip " + str(request.remote_addr))
+        app.logger.info(
+            ": user trying to log in - "
+            + str(email)
+            + " from ip "
+            + str(request.remote_addr)
+        )
         try:
             correct_pw = USERS[email]
         except Exception:
-            app.logger.warning(": user log in failed - " + str(email) + " from ip " + str(request.remote_addr))
+            app.logger.warning(
+                ": user log in failed - "
+                + str(email)
+                + " from ip "
+                + str(request.remote_addr)
+            )
             return redirect(url_for("index"))
         if pw == correct_pw:
             app.logger.info(": user logged in - " + email)
@@ -234,14 +265,20 @@ def userlogin():
             except Exception:
                 pass
             return render_template("index.html")
-        app.logger.warning(": user log in failed - " + str(email) + " from ip " + str(request.remote_addr))
-        return redirect(url_for('index'))
+        app.logger.warning(
+            ": user log in failed - "
+            + str(email)
+            + " from ip "
+            + str(request.remote_addr)
+        )
+        return redirect(url_for("index"))
 
 
 # -------------- Index.html / Home --------------
 
-@app.route("/", methods=['GET', 'POST'])
-@app.route("/home", methods=['GET', 'POST'])
+
+@app.route("/", methods=["GET", "POST"])
+@app.route("/home", methods=["GET", "POST"])
 @flask_login.login_required
 def index():
     return render_template("index.html")
@@ -249,7 +286,8 @@ def index():
 
 # -------------- config --------------
 
-@app.route("/config", methods=['GET', 'POST'])
+
+@app.route("/config", methods=["GET", "POST"])
 @flask_login.login_required
 def config():
     status = ""
@@ -258,14 +296,14 @@ def config():
         with open(config_file, "r") as f:
             content = ""
             for line in f:
-                content += (line + "<br>")
-    elif request.method == 'POST':
+                content += line + "<br>"
+    elif request.method == "POST":
         h = html2text.HTML2Text()
         h.body_width = 0
-        content = h.handle(request.form.get('editordata'))
-        if request.form['submit'] == 'cancel':
-            return redirect(url_for('index'))
-        elif request.form['submit'] == "submit" and content != "":
+        content = h.handle(request.form.get("editordata"))
+        if request.form["submit"] == "cancel":
+            return redirect(url_for("index"))
+        elif request.form["submit"] == "submit" and content != "":
             try:
                 temp_config_file = "config_file" + ".bak"
                 with open(temp_config_file, "w") as f:
@@ -285,17 +323,19 @@ def config():
                 status = "cannot check config file (write error)!"
         else:
             # indicate a failure to enter required data
-            status = 'ERROR: page title and content are required!'
+            status = "ERROR: page title and content are required!"
         with open(config_file, "r") as f:
             content = ""
             for line in f:
-                content += (line + "<br>")
+                content += line + "<br>"
 
-    return render_template('configedit.html', content=content, config_file=config_file, status=status)
+    return render_template(
+        "configedit.html", content=content, config_file=config_file, status=status
+    )
 
 
 # -------------- pkill --------------
-@app.route("/pkill", methods=['GET', 'POST'])
+@app.route("/pkill", methods=["GET", "POST"])
 @flask_login.login_required
 def pkill():
     RED.set_putcmd("pkill")
@@ -303,7 +343,7 @@ def pkill():
 
 
 # -------------- pd_start --------------
-@app.route("/pdstart", methods=['GET', 'POST'])
+@app.route("/pdstart", methods=["GET", "POST"])
 @flask_login.login_required
 def pdstart():
     RED.set_putcmd("pdstart")
@@ -311,14 +351,15 @@ def pdstart():
 
 
 # -------------- pd_stop --------------
-@app.route("/pdstop", methods=['GET', 'POST'])
+@app.route("/pdstop", methods=["GET", "POST"])
 @flask_login.login_required
 def pdstop():
     RED.set_putcmd("pdstop")
     return render_template("stop.html")
 
+
 # -------------- status --------------
-@app.route("/status", methods=['GET', 'POST'])
+@app.route("/status", methods=["GET", "POST"])
 @flask_login.login_required
 def status():
     RED.set_host_status(None)
@@ -332,8 +373,9 @@ def status():
     statuslist = statuslist.split("\n")
     return render_template("status.html", statuslist=statuslist)
 
+
 # -------------- status --------------
-@app.route("/speedtest", methods=['GET', 'POST'])
+@app.route("/speedtest", methods=["GET", "POST"])
 @flask_login.login_required
 def speedtest():
     RED.set_host_speedtest(None)
@@ -346,15 +388,17 @@ def speedtest():
     host_speedtest = host_speedtest.split("\n")
     return render_template("speedtest.html", speedtest=host_speedtest)
 
+
 # -------------- restart --------------
-@app.route("/pdrestart", methods=['GET', 'POST'])
+@app.route("/pdrestart", methods=["GET", "POST"])
 @flask_login.login_required
 def restart():
     RED.set_putcmd("pdrestart")
     return render_template("restart.html")
 
+
 # -------------- detections --------------
-@app.route("/detections", methods=['GET', 'POST'])
+@app.route("/detections", methods=["GET", "POST"])
 @flask_login.login_required
 def detections():
     filelist = [f for f in os.listdir(static_dir) if f.endswith(".jpg")]
@@ -368,11 +412,11 @@ def detections():
             detlist.append(p1)
         except Exception:
             pass
-    return render_template('detections.html', detlist=detlist)
+    return render_template("detections.html", detlist=detlist)
 
 
 # -------------- photos --------------
-@app.route("/photos", methods=['GET', 'POST'])
+@app.route("/photos", methods=["GET", "POST"])
 @flask_login.login_required
 def photos():
     RED.set_free_photodata(None)
@@ -391,7 +435,7 @@ def photos():
         except Exception:
             pass
         pass
-    return render_template('photos.html', detlist=detlist)
+    return render_template("photos.html", detlist=detlist)
 
 
 # -------------- StandaloneApplication/main --------------
@@ -405,8 +449,11 @@ class StandaloneApplication(gunicorn.app.base.BaseApplication):
         super().__init__()
 
     def load_config(self):
-        config = {key: value for key, value in self.options.items()
-                  if key in self.cfg.settings and value is not None}
+        config = {
+            key: value
+            for key, value in self.options.items()
+            if key in self.cfg.settings and value is not None
+        }
         for key, value in config.items():
             self.cfg.set(key.lower(), value)
 
@@ -427,8 +474,10 @@ def main(cfg, dirs, inqueue, outqueue, loggerqueue):
     DIRS = dirs
 
     log_handler = logging.FileHandler(dirs["logs"] + "webflask.log", mode="w")
-    wff = logging.Formatter("%(asctime)s - %(levelname)s / %(filename)s:%(lineno)s (%(funcName)s) - '%(message)s'",
-                      "%d-%m-%Y %H:%M:%S")
+    wff = logging.Formatter(
+        "%(asctime)s - %(levelname)s / %(filename)s:%(lineno)s (%(funcName)s) - '%(message)s'",
+        "%d-%m-%Y %H:%M:%S",
+    )
     log_handler.setFormatter(wff)
     app.logger.removeHandler(default_handler)
     app.logger.setLevel(logging.DEBUG)
@@ -457,18 +506,20 @@ def main(cfg, dirs, inqueue, outqueue, loggerqueue):
     except Exception as e:
         app.logger.warning(": " + str(e) + " - setting gunicorn config to defaults!")
         options = {
-            'bind': '%s:%s' % ('0.0.0.0', '8000'),
-            'log-file': '/media/cifs/dokumente/g4logs/gunicorn.log',
-            'capture_output': True,
-            'debug': True,
-            'graceful_timeout': 10,
+            "bind": "%s:%s" % ("0.0.0.0", "8000"),
+            "log-file": "/media/cifs/dokumente/g4logs/gunicorn.log",
+            "capture_output": True,
+            "debug": True,
+            "graceful_timeout": 10,
             "timeout": 120,
-            'worker_class': 'sync',
-            'workers': 8
+            "worker_class": "sync",
+            "workers": 8,
         }
-    signal.signal(signal.SIGFPE, sighandler)     # nicht die feine englische / faut de mieux
+    signal.signal(
+        signal.SIGFPE, sighandler
+    )  # nicht die feine englische / faut de mieux
     StandaloneApplication(app, options).run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

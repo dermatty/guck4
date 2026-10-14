@@ -28,7 +28,6 @@ import signal
 import shutil, sys
 import html2text
 
-TEST = 1
 RED = None
 USERS = None
 DIRS = None
